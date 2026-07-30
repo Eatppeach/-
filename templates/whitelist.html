@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}白名单 - 大模型数据防护能力平台{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="flex-between" style="margin-bottom: 16px;">
+        <div>
+            <h2>✅ 白名单管理</h2>
+            <p class="text-muted" style="margin-top: 4px;">白名单内的用户、IP 或文本内容将跳过安全检测，直接放行</p>
+        </div>
+        <button class="btn btn-primary" onclick="openModal('addWl')">＋ 添加白名单</button>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>ID</th><th>类型</th><th>值</th><th>描述</th><th>状态</th><th>操作</th></tr></thead>
+            <tbody>
+                {% for w in whitelist %}
+                <tr>
+                    <td><span class="code">{{ w.id }}</span></td>
+                    <td>
+                        {% if w.whitelist_type == 'user' %}
+                        <span class="tag tag-personal">👤 用户</span>
+                        {% elif w.whitelist_type == 'ip' %}
+                        <span class="tag tag-network">🌐 IP地址</span>
+                        {% elif w.whitelist_type == 'text' %}
+                        <span class="tag tag-business">📝 文本内容</span>
+                        {% else %}
+                        <span class="tag tag-default">{{ w.whitelist_type }}</span>
+                        {% endif %}
+                    </td>
+                    <td><code class="code">{{ w.whitelist_value }}</code></td>
+                    <td class="text-muted">{{ w.description or '—' }}</td>
+                    <td>
+                        <span class="status-indicator">
+                            <span class="status-dot {{ 'on' if w.enabled else 'off' }}"></span>
+                            {{ '启用' if w.enabled else '禁用' }}
+                        </span>
+                    </td>
+                    <td><button class="btn btn-danger btn-xs" onclick="delWl({{ w.id }})">🗑 删除</button></td>
+                </tr>
+                {% endfor %}
+                {% if not whitelist %}
+                <tr><td colspan="6" class="empty"><div class="empty-icon">📭</div>暂无白名单，点击"添加白名单"创建</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="addWl" class="modal-overlay">
+    <div class="modal">
+        <h3>＋ 添加白名单</h3>
+        <form onsubmit="addWl(event)">
+            <div class="form-group"><label>白名单类型</label><select name="whitelist_type"><option value="user">👤 用户 — 指定用户ID免检</option><option value="ip">🌐 IP地址 — 指定IP免检</option><option value="text">📝 文本内容 — 包含特定文本免检</option></select></div>
+            <div class="form-group"><label>白名单值 *</label><input name="whitelist_value" required placeholder="如：trusted_user_001"><div class="help-text">根据类型填写对应的用户ID、IP地址或文本内容</div></div>
+            <div class="form-group"><label>描述</label><input name="description" placeholder="添加原因说明"></div>
+            <div class="modal-actions">
+                <button type="button" class="btn" onclick="closeModal('addWl')">取消</button>
+                <button type="submit" class="btn btn-primary">确认添加</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+async function addWl(e) {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.target));
+    await fetch('/api/whitelist', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+    showToast('白名单已添加', 'success');
+    closeModal('addWl');
+    location.reload();
+}
+async function delWl(id) {
+    if (!confirm('确认删除该白名单？')) return;
+    await fetch(`/api/whitelist/${id}`, { method: 'DELETE' });
+    showToast('已删除', 'success');
+    location.reload();
+}
+</script>
+{% endblock %}

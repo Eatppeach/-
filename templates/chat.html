@@ -1,0 +1,364 @@
+{% extends "base.html" %}
+{% block title %}实时对话 - 大模型数据防护能力平台{% endblock %}
+{% block content %}
+<style>
+    .chat-container { display: flex; gap: 20px; height: calc(100vh - 140px); }
+    .chat-main { flex: 1; display: flex; flex-direction: column; }
+    .chat-sidebar { width: 300px; display: flex; flex-direction: column; gap: 12px; }
+
+    .chat-messages { flex: 1; overflow-y: auto; background: #fff; border-radius: 10px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 12px; }
+    .msg { margin-bottom: 16px; display: flex; gap: 10px; }
+    .msg.user { flex-direction: row-reverse; }
+    .msg-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; color: #fff; flex-shrink: 0; }
+    .msg.user .msg-avatar { background: #1a73e8; }
+    .msg.assistant .msg-avatar { background: #43a047; }
+    .msg.system .msg-avatar { background: #e65100; }
+    .msg-content { max-width: 75%; padding: 12px 16px; border-radius: 12px; font-size: 14px; line-height: 1.6; word-break: break-word; }
+    .msg.user .msg-content { background: #e8f0fe; color: #333; border-bottom-right-radius: 4px; }
+    .msg.assistant .msg-content { background: #f5f5f5; color: #333; border-bottom-left-radius: 4px; }
+    .msg.system .msg-content { background: #fff3e0; color: #e65100; font-size: 12px; border-radius: 8px; text-align: center; }
+    .msg-content .sensitive-warn { color: #e65100; font-size: 12px; padding: 4px 8px; background: #fff3e0; border-radius: 4px; margin-top: 6px; display: inline-block; }
+
+    .chat-input-area { display: flex; gap: 10px; }
+    .chat-input-area textarea { flex: 1; padding: 12px; border: 1px solid #d0d0d0; border-radius: 10px; font-size: 14px; resize: none; height: 60px; font-family: inherit; }
+    .chat-input-area textarea:focus { outline: none; border-color: #1a73e8; }
+    .chat-input-area button { padding: 0 24px; border: none; border-radius: 10px; background: #1a73e8; color: #fff; font-size: 14px; cursor: pointer; transition: all 0.2s; }
+    .chat-input-area button:hover { background: #1557b0; }
+    .chat-input-area button:disabled { background: #ccc; cursor: not-allowed; }
+
+    .card h3 { font-size: 15px; margin-bottom: 10px; color: #333; }
+    .card label { display: block; font-size: 12px; color: #888; margin-bottom: 3px; }
+    .card input, .card select { width: 100%; padding: 8px 10px; border: 1px solid #d0d0d0; border-radius: 6px; font-size: 13px; }
+    .card input:focus, .card select:focus { outline: none; border-color: #1a73e8; }
+    .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
+    .status-dot.online { background: #43a047; }
+    .status-dot.offline { background: #ccc; }
+    .typing-indicator { display: flex; gap: 4px; padding: 12px 16px; }
+    .typing-indicator span { width: 8px; height: 8px; border-radius: 50%; background: #bbb; animation: bounce 1.4s infinite ease-in-out; }
+    .typing-indicator span:nth-child(1) { animation-delay: 0s; }
+    .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+
+    .preset-btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .preset-btns button { padding: 5px 10px; border: 1px solid #d0d0d0; border-radius: 14px; background: #fff; font-size: 12px; cursor: pointer; color: #555; transition: all 0.2s; }
+    .preset-btns button:hover { background: #e8f0fe; border-color: #1a73e8; color: #1a73e8; }
+    .clear-btn { padding: 6px 14px; border: 1px solid #e0e0e0; border-radius: 6px; background: #fff; font-size: 13px; cursor: pointer; color: #888; }
+    .clear-btn:hover { background: #f5f5f5; color: #e53935; }
+</style>
+
+<div class="chat-container">
+    <!-- 左侧：对话区 -->
+    <div class="chat-main">
+        <div class="card" style="padding: 12px 20px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <span class="status-dot online" id="statusDot"></span>
+                <strong style="font-size: 14px;">AI 安全对话</strong>
+                <span style="font-size: 12px; color: #888; margin-left: 12px;" id="modelLabel">未连接</span>
+            </div>
+            <button class="clear-btn" onclick="clearChat()">清空对话</button>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="msg system">
+                <div class="msg-content">
+                    欢迎使用大模型安全对话！<br>
+                    请在右侧配置 LLM 连接信息，然后开始对话。所有输入数据将经过<strong>敏感信息识别与脱敏</strong>处理后再发送给大模型。
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-input-area">
+            <textarea id="userInput" placeholder="输入消息，Enter 发送，Shift+Enter 换行" onkeydown="handleKeyDown(event)"></textarea>
+            <button id="sendBtn" onclick="sendMessage()">发送</button>
+        </div>
+    </div>
+
+    <!-- 右侧：配置面板 -->
+    <div class="chat-sidebar">
+        <div class="card">
+            <h3>LLM 连接配置</h3>
+            <div class="form-group">
+                <label>API 地址</label>
+                <input id="apiUrl" placeholder="https://api.openai.com/v1/chat/completions" value="">
+            </div>
+            <div class="form-group">
+                <label>API Key</label>
+                <input id="apiKey" type="password" placeholder="sk-..." value="">
+            </div>
+            <div class="form-group">
+                <label>模型</label>
+                <select id="modelSelect">
+                    <option value="gpt-4o">gpt-4o</option>
+                    <option value="gpt-4o-mini">gpt-4o-mini</option>
+                    <option value="gpt-3.5-turbo" selected>gpt-3.5-turbo</option>
+                    <option value="deepseek-chat">deepseek-chat</option>
+                    <option value="qwen-turbo">qwen-turbo</option>
+                    <option value="glm-4">glm-4</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>用户标识</label>
+                <input id="userId" placeholder="demo_user" value="demo_user">
+            </div>
+            <button class="btn btn-primary" onclick="connectLLM()" style="width:100%; margin-top:6px;">连接 LLM</button>
+        </div>
+
+        <div class="card">
+            <h3>快捷测试</h3>
+            <p style="font-size:12px;color:#888;margin-bottom:8px;">测试安全网关的脱敏效果</p>
+            <div class="preset-btns">
+                <button onclick="quickTest('idcard')">含身份证号</button>
+                <button onclick="quickTest('phone')">含手机号</button>
+                <button onclick="quickTest('all')">综合敏感信息</button>
+                <button onclick="quickTest('normal')">普通问题</button>
+            </div>
+        </div>
+
+        <div class="card" id="securityCard" style="display:none;">
+            <h3>安全检测详情</h3>
+            <div id="securityDetail" style="font-size:12px; color:#e65100;"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+let chatHistory = [];
+let llmConfig = { url: '', key: '', model: 'gpt-3.5-turbo' };
+let isStreaming = false;
+
+// DOM 加载完成后从 localStorage 恢复配置
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        var saved = localStorage.getItem('llm_config');
+        if (saved) {
+            var cfg = JSON.parse(saved);
+            if (cfg.url) llmConfig.url = cfg.url;
+            if (cfg.key) llmConfig.key = cfg.key;
+            if (cfg.model) llmConfig.model = cfg.model;
+
+            var apiUrlEl = document.getElementById('apiUrl');
+            var apiKeyEl = document.getElementById('apiKey');
+            var modelEl = document.getElementById('modelSelect');
+
+            if (apiUrlEl) apiUrlEl.value = llmConfig.url;
+            if (apiKeyEl) apiKeyEl.value = llmConfig.key;
+            if (modelEl && llmConfig.model) modelEl.value = llmConfig.model;
+
+            if (llmConfig.url) {
+                var dot = document.getElementById('statusDot');
+                var label = document.getElementById('modelLabel');
+                if (dot) dot.className = 'status-dot online';
+                if (label) {
+                    label.textContent = llmConfig.model + ' (已连接)';
+                    label.style.color = '#43a047';
+                }
+            }
+        }
+    } catch (e) {
+        localStorage.removeItem('llm_config');
+    }
+});
+
+function connectLLM() {
+    var apiUrlEl = document.getElementById('apiUrl');
+    var apiKeyEl = document.getElementById('apiKey');
+    var modelEl = document.getElementById('modelSelect');
+
+    llmConfig.url = apiUrlEl.value.trim();
+    llmConfig.key = apiKeyEl.value.trim();
+    llmConfig.model = modelEl.value;
+
+    if (!llmConfig.url) {
+        showToast('请输入 API 地址', 'error');
+        return;
+    }
+
+    // 持久化到 localStorage
+    localStorage.setItem('llm_config', JSON.stringify({
+        url: llmConfig.url,
+        key: llmConfig.key,
+        model: llmConfig.model
+    }));
+
+    var dot = document.getElementById('statusDot');
+    var label = document.getElementById('modelLabel');
+    if (dot) dot.className = 'status-dot online';
+    if (label) {
+        label.textContent = llmConfig.model + ' (已连接)';
+        label.style.color = '#43a047';
+    }
+    showToast('LLM 连接成功');
+}
+
+function handleKeyDown(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+    }
+}
+
+async function sendMessage() {
+    const input = document.getElementById('userInput');
+    const text = input.value.trim();
+    if (!text || isStreaming) return;
+
+    if (!llmConfig.url) {
+        showToast('请先在右侧配置并连接 LLM', 'error');
+        return;
+    }
+
+    input.value = '';
+    isStreaming = true;
+    document.getElementById('sendBtn').disabled = true;
+
+    // 添加用户消息
+    addMessage('user', text);
+    chatHistory.push({ role: 'user', content: text });
+
+    // 添加助手消息占位
+    const assistantMsg = addMessage('assistant', '');
+    const contentDiv = assistantMsg.querySelector('.msg-content');
+
+    // 显示打字动画
+    contentDiv.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+    scrollToBottom();
+
+    try {
+        const userId = document.getElementById('userId').value || 'demo_user';
+        const resp = await fetch('/api/gateway/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message: text,
+                history: chatHistory.slice(0, -1),
+                upstream_url: llmConfig.url,
+                api_key: llmConfig.key,
+                model: llmConfig.model,
+                stream: true,
+                user_id: userId
+            })
+        });
+
+        if (!resp.ok) {
+            const err = await resp.json();
+            contentDiv.innerHTML = '<span style="color:#e53935;">[错误] ' + (err.message || '请求失败') + '</span>';
+            if (err.scan_result) showSecurityDetail(err.scan_result);
+            return;
+        }
+
+        // 读取 SSE 流
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let fullContent = '';
+        let done = false;
+
+        while (!done) {
+            const { value, done: streamDone } = await reader.read();
+            if (streamDone) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+                if (!line.startsWith('data: ')) continue;
+                const data = line.slice(6);
+                if (data === '[DONE]') { done = true; break; }
+                try {
+                    const json = JSON.parse(data);
+                    if (json.error) {
+                        contentDiv.textContent = '[错误] ' + json.error;
+                        done = true;
+                        break;
+                    }
+                    if (json.warning) {
+                        const warn = document.createElement('span');
+                        warn.className = 'sensitive-warn';
+                        warn.textContent = ' ⚠ ' + json.note;
+                        contentDiv.appendChild(warn);
+                        continue;
+                    }
+                    const delta = json.choices?.[0]?.delta?.content;
+                    if (delta) {
+                        fullContent += delta;
+                        contentDiv.textContent = fullContent;
+                        scrollToBottom();
+                    }
+                } catch (e) {
+                    // 跳过无法解析的行
+                }
+            }
+        }
+
+        if (fullContent) {
+            chatHistory.push({ role: 'assistant', content: fullContent });
+        }
+
+    } catch (e) {
+        contentDiv.innerHTML = '<span style="color:#e53935;">[网络错误] ' + e.message + '</span>';
+    } finally {
+        isStreaming = false;
+        document.getElementById('sendBtn').disabled = false;
+        document.getElementById('userInput').focus();
+    }
+}
+
+function addMessage(role, text) {
+    const div = document.createElement('div');
+    div.className = 'msg ' + role;
+    div.innerHTML = `
+        <div class="msg-avatar">${role === 'user' ? 'U' : role === 'assistant' ? 'AI' : '!'}</div>
+        <div class="msg-content">${escapeHtml(text)}</div>
+    `;
+    document.getElementById('chatMessages').appendChild(div);
+    scrollToBottom();
+    return div;
+}
+
+function showSecurityDetail(scanResult) {
+    const card = document.getElementById('securityCard');
+    const detail = document.getElementById('securityDetail');
+    card.style.display = 'block';
+    let html = '';
+    if (scanResult.matches && scanResult.matches.length > 0) {
+        html = '<p>检测到 ' + scanResult.match_count + ' 处敏感信息:</p><ul style="padding-left:16px;margin-top:4px;">';
+        scanResult.matches.forEach(m => {
+            html += '<li>' + m.rule_name + ': <code>' + m.matched_text + '</code></li>';
+        });
+        html += '</ul>';
+    }
+    detail.innerHTML = html;
+}
+
+function scrollToBottom() {
+    const el = document.getElementById('chatMessages');
+    el.scrollTop = el.scrollHeight;
+}
+
+function clearChat() {
+    chatHistory = [];
+    document.getElementById('chatMessages').innerHTML = `
+        <div class="msg system">
+            <div class="msg-content">对话已清空。所有输入将经过安全网关处理。</div>
+        </div>`;
+}
+
+function quickTest(type) {
+    const tests = {
+        'idcard': '请问身份证号110101199001011234属于哪个地区？',
+        'phone': '帮我查一下手机号13812345678的归属地',
+        'all': '请帮我登记以下信息：姓名张三，身份证110101199001011234，手机13812345678，邮箱zhangsan@example.com，银行卡6222021234567890123',
+        'normal': '请介绍一下大模型数据安全防护的重要性'
+    };
+    document.getElementById('userInput').value = tests[type] || '';
+    document.getElementById('userInput').focus();
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+</script>
+{% endblock %}

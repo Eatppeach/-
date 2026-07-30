@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}在线演示 - 大模型数据防护能力平台{% endblock %}
+{% block content %}
+<div class="card">
+    <h2>🧪 在线演示 — 敏感数据识别与脱敏</h2>
+    <p style="color:#888; font-size:13px; margin-bottom: 16px;">
+        输入包含敏感信息的文本，系统将自动识别并展示脱敏效果。支持身份证、手机号、银行卡、邮箱、GPS 坐标、统一社会信用代码等。
+    </p>
+    <div class="form-group">
+        <label>输入文本</label>
+        <textarea id="inputText" rows="5" placeholder="在此输入测试文本...">我的身份证号是110101199001011234，手机号是13812345678，
+银行卡号是6222021234567890123，邮箱是zhangsan@example.com，
+公司统一社会信用代码是91110108MA01ABCD1X。</textarea>
+        <div class="help-text">💡 提示：点击下方快捷按钮可快速填充测试文本</div>
+    </div>
+
+    <div style="display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;">
+        <button class="btn btn-primary" onclick="scanOnly()">🔍 仅扫描识别</button>
+        <button class="btn btn-success" onclick="protect()">🔐 安全检测 + 脱敏</button>
+        <button class="btn btn-danger" onclick="testBlock()">🚫 测试阻断（大量敏感数据）</button>
+    </div>
+
+    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
+        <span style="font-size:12px; color:#888; line-height: 28px;">快捷测试：</span>
+        <button class="btn btn-outline btn-sm" onclick="quickTest('idcard')">含身份证号</button>
+        <button class="btn btn-outline btn-sm" onclick="quickTest('phone')">含手机号</button>
+        <button class="btn btn-outline btn-sm" onclick="quickTest('all')">综合敏感信息</button>
+        <button class="btn btn-outline btn-sm" onclick="quickTest('normal')">普通问题</button>
+    </div>
+</div>
+
+<div class="card" id="resultCard" style="display:none;">
+    <h2 id="resultTitle">📊 处理结果</h2>
+    <div id="resultContent"></div>
+</div>
+
+<div class="card" id="scanCard" style="display:none;">
+    <h2>🔍 识别详情</h2>
+    <div id="scanContent"></div>
+</div>
+
+<script>
+async function scanOnly() {
+    const text = document.getElementById('inputText').value;
+    const resp = await fetch('/api/gateway/scan', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({text, user_id: 'demo_user'})
+    });
+    const data = await resp.json();
+    showResult('🔍 扫描结果', data);
+}
+
+async function protect() {
+    const text = document.getElementById('inputText').value;
+    const resp = await fetch('/api/gateway/protect', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({text, user_id: 'demo_user'})
+    });
+    const data = await resp.json();
+    showResult('🔐 安全处理结果', data);
+}
+
+async function testBlock() {
+    const text = '密码password: admin123, api_key: sk-abcdefghijklmnopqrstuvwxyz1234567890, token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9, secret: mysecretkey1234567890, 身份证号: 110101199001011234, 身份证号: 320102198502152345, 身份证号: 440103199210203456, 身份证号: 510104198712013456, 身份证号: 330106199508154567, 身份证号: 210102199311165678, 身份证号: 370102199004176789, 身份证号: 420106199709187890, 身份证号: 500102199112198901, 身份证号: 610104199806209012, 身份证号: 350102199503211234, 身份证号: 220102199107223456';
+    const resp = await fetch('/api/gateway/protect', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({text, user_id: 'demo_user'})
+    });
+    const data = await resp.json();
+    showResult('🚫 阻断测试结果', data);
+}
+
+function showResult(title, data) {
+    document.getElementById('resultTitle').textContent = title;
+    document.getElementById('resultCard').style.display = 'block';
+
+    let html = '';
+    html += '<div style="display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 12px;">';
+    html += `<div><span class="text-muted">处理动作：</span><span class="tag tag-${data.action === 'blocked' ? 'high' : data.action === 'desensitized' ? 'medium' : 'low'}">${data.action === 'blocked' ? '🚫 已阻断' : data.action === 'desensitized' ? '🔐 已脱敏' : '✅ 已放行'}</span></div>`;
+    html += `<div><span class="text-muted">阻断级别：</span><span class="tag tag-default">${data.block_level || '无'}</span></div>`;
+    html += `<div><span class="text-muted">处理耗时：</span><strong>${data.processing_time_ms?.toFixed(2) || '0'} ms</strong></div>`;
+    html += '</div>';
+
+    if (data.block_message) {
+        html += `<div style="background: #fff3e0; padding: 10px 14px; border-radius: 6px; margin-bottom: 12px; font-size: 13px;"><span style="color:#e65100;">⚠ ${data.block_message}</span></div>`;
+    }
+    if (data.processed_text) {
+        html += `<div style="margin-bottom: 8px;"><strong>处理后的文本：</strong></div>`;
+        html += `<div style="background: #f5f5f5; padding: 14px; border-radius: 8px; word-break: break-all; font-size: 14px; line-height: 1.8;">${highlightMatches(data.processed_text, data.scan_result)}</div>`;
+    }
+
+    document.getElementById('resultContent').innerHTML = html;
+
+    if (data.scan_result && data.scan_result.matches) {
+        document.getElementById('scanCard').style.display = 'block';
+        let scanHtml = '';
+        if (data.scan_result.matches.length === 0) {
+            scanHtml += '<p style="color: #43a047; font-size: 15px;">✅ 未检测到敏感信息</p>';
+        } else {
+            scanHtml += `<p style="margin-bottom: 10px;">共检测到 <strong>${data.scan_result.match_count}</strong> 处敏感信息，最高级别：<span class="tag tag-${data.scan_result.highest_level}">${data.scan_result.highest_level}</span></p>`;
+            scanHtml += '<table><thead><tr><th>规则</th><th>匹配内容</th><th>敏感级别</th><th>分类</th></tr></thead><tbody>';
+            data.scan_result.matches.forEach(m => {
+                scanHtml += `<tr><td>${m.rule_name}</td><td><span class="highlight">${m.matched_text}</span></td><td><span class="tag tag-${m.sensitivity_level}">${m.sensitivity_level}</span></td><td><span class="tag tag-${m.category}">${m.category}</span></td></tr>`;
+            });
+            scanHtml += '</tbody></table>';
+        }
+        document.getElementById('scanContent').innerHTML = scanHtml;
+    }
+}
+
+function highlightMatches(text, scanResult) {
+    if (!scanResult || !scanResult.matches) return text;
+    return text.replace(/\*{3,}/g, '<span style="background:#fff9c4; color:#e65100; font-weight:bold; padding:0 2px;">$&</span>');
+}
+
+function quickTest(type) {
+    const tests = {
+        'idcard': '请问身份证号110101199001011234属于哪个地区？',
+        'phone': '帮我查一下手机号13812345678的归属地',
+        'all': '请帮我登记以下信息：姓名张三，身份证110101199001011234，手机13812345678，邮箱zhangsan@example.com，银行卡6222021234567890123',
+        'normal': '请介绍一下大模型数据安全防护的重要性'
+    };
+    document.getElementById('inputText').value = tests[type] || '';
+    document.getElementById('inputText').focus();
+}
+</script>
+{% endblock %}
