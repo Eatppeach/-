@@ -11,18 +11,18 @@
             </p>
         </div>
         {% if session.role == 'admin' %}
-        <button class="btn btn-danger btn-sm" onclick="cleanup()">🗑 清理过期日志</button>
+        <button class="btn btn-danger btn-sm" onclick="cleanup()">清理过期日志</button>
         {% endif %}
     </div>
 
     <!-- 筛选表单 -->
-    <form class="form-row" style="margin-bottom: 16px; padding: 16px; background: #fafbfc; border-radius: 8px;" onsubmit="event.preventDefault(); filterLogs();">
+    <form style="display: flex; gap: 16px; margin-bottom: 16px; padding: 16px; background: #f8fafc; border-radius: 10px; flex-wrap: wrap; align-items: flex-end; border: 1px solid var(--border);" onsubmit="event.preventDefault(); filterLogs();">
         <div class="form-group" style="margin-bottom: 0;"><label>用户</label><input name="user_id" value="{{ user_id }}" placeholder="输入用户ID" style="width:140px;"></div>
         <div class="form-group" style="margin-bottom: 0;"><label>处理动作</label><select name="action" style="width:140px;"><option value="">全部</option><option value="blocked" {% if action=='blocked' %}selected{% endif %}>🚫 已阻断</option><option value="desensitized" {% if action=='desensitized' %}selected{% endif %}>🔐 已脱敏</option><option value="passed" {% if action=='passed' %}selected{% endif %}>✅ 已放行</option></select></div>
         <div class="form-group" style="margin-bottom: 0;"><label>开始日期</label><input type="date" name="date_from" value="{{ date_from }}" style="width:140px;"></div>
         <div class="form-group" style="margin-bottom: 0;"><label>结束日期</label><input type="date" name="date_to" value="{{ date_to }}" style="width:140px;"></div>
-        <div class="form-group" style="margin-bottom: 0; align-self: flex-end;">
-            <button type="submit" class="btn btn-primary">🔍 筛选</button>
+        <div class="form-group" style="margin-bottom: 0;">
+            <button type="submit" class="btn btn-primary btn-sm">🔍 筛选</button>
             <button type="button" class="btn btn-outline btn-sm" onclick="location.href='/audit'" style="margin-left: 6px;">重置</button>
         </div>
     </form>
@@ -66,7 +66,7 @@
         {% endfor %}
     </div>
     {% endif %}
-    <p style="text-align:center; margin-top: 10px; font-size: 13px; color: #888;">共 <strong>{{ total }}</strong> 条记录{% if total_pages > 1 %}，第 <strong>{{ page }}/{{ total_pages }}</strong> 页{% endif %}</p>
+    <p style="text-align:center; margin-top: 10px; font-size: 13px; color: var(--text-muted);">共 <strong>{{ total }}</strong> 条记录{% if total_pages > 1 %}，第 <strong>{{ page }}/{{ total_pages }}</strong> 页{% endif %}</p>
 </div>
 
 <script>

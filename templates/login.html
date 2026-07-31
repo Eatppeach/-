@@ -5,41 +5,192 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>登录 - 大模型数据防护能力平台</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: linear-gradient(135deg, #1a73e8, #0d47a1); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-        .login-box { background: #fff; border-radius: 12px; padding: 40px; width: 400px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
-        .login-box h1 { text-align: center; font-size: 22px; color: #1a73e8; margin-bottom: 8px; }
-        .login-box .subtitle { text-align: center; color: #888; font-size: 13px; margin-bottom: 28px; }
+
+        body {
+            font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #1e293b 0%, #334155 30%, #1e293b 60%, #0f172a 100%);
+            position: relative;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* 背景装饰 */
+        .bg-pattern {
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(ellipse at 20% 50%, rgba(79,110,247,0.12) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(99,102,241,0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 80%, rgba(79,110,247,0.06) 0%, transparent 50%);
+            pointer-events: none;
+        }
+        .bg-grid {
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none;
+        }
+        .bg-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.15;
+            pointer-events: none;
+            animation: float 20s ease-in-out infinite;
+        }
+        .bg-orb:nth-child(1) { width: 400px; height: 400px; background: #4f6ef7; top: -100px; left: -100px; animation-delay: 0s; }
+        .bg-orb:nth-child(2) { width: 300px; height: 300px; background: #6366f1; bottom: -80px; right: -80px; animation-delay: -7s; }
+        .bg-orb:nth-child(3) { width: 200px; height: 200px; background: #818cf8; top: 50%; left: 60%; animation-delay: -14s; }
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -30px) scale(1.05); }
+            66% { transform: translate(-20px, 20px) scale(0.95); }
+        }
+
+        .login-box {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 44px 40px;
+            width: 420px;
+            box-shadow: 0 24px 80px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.1);
+            position: relative;
+            z-index: 1;
+            animation: loginIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes loginIn {
+            from { transform: translateY(24px) scale(0.96); opacity: 0; }
+            to { transform: translateY(0) scale(1); opacity: 1; }
+        }
+        .login-logo {
+            width: 56px; height: 56px;
+            background: linear-gradient(135deg, #4f6ef7, #6366f1);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            margin: 0 auto 16px;
+            box-shadow: 0 8px 24px rgba(79,110,247,0.35);
+        }
+        .login-box h1 { text-align: center; font-size: 22px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
+        .login-box .subtitle { text-align: center; color: #94a3b8; font-size: 13px; margin-bottom: 32px; }
+
         .form-group { margin-bottom: 18px; }
-        .form-group label { display: block; margin-bottom: 6px; font-weight: 500; font-size: 14px; color: #555; }
-        .form-group input { width: 100%; padding: 10px 14px; border: 1px solid #d0d0d0; border-radius: 8px; font-size: 14px; transition: border-color 0.2s; }
-        .form-group input:focus { outline: none; border-color: #1a73e8; }
-        .btn-login { width: 100%; padding: 12px; border: none; border-radius: 8px; background: #1a73e8; color: #fff; font-size: 16px; cursor: pointer; transition: background 0.2s; }
-        .btn-login:hover { background: #1557b0; }
-        .btn-login:disabled { background: #ccc; cursor: not-allowed; }
-        .error-msg { color: #e53935; text-align: center; font-size: 13px; margin-top: 12px; display: none; }
-        .error-msg.show { display: block; }
-        .hint { text-align: center; margin-top: 20px; font-size: 12px; color: #aaa; }
+        .form-group label {
+            display: block; margin-bottom: 6px;
+            font-weight: 600; font-size: 13px; color: #475569;
+        }
+        .form-group .input-wrap {
+            position: relative;
+        }
+        .form-group .input-icon {
+            position: absolute;
+            left: 14px; top: 50%;
+            transform: translateY(-50%);
+            font-size: 16px;
+            color: #94a3b8;
+            pointer-events: none;
+            transition: color 0.2s;
+        }
+        .form-group input {
+            width: 100%; padding: 12px 14px 12px 42px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 10px; font-size: 14px;
+            font-family: inherit;
+            transition: all 0.22s;
+            background: #f8fafc;
+            color: #1e293b;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #4f6ef7;
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(79,110,247,0.1);
+        }
+        .form-group input:focus ~ .input-icon,
+        .form-group input:focus + .input-icon { color: #4f6ef7; }
+
+        .btn-login {
+            width: 100%; padding: 13px;
+            border: none; border-radius: 10px;
+            background: linear-gradient(135deg, #4f6ef7, #6366f1);
+            color: #fff; font-size: 15px; font-weight: 600;
+            cursor: pointer; transition: all 0.22s;
+            font-family: inherit;
+            box-shadow: 0 4px 14px rgba(79,110,247,0.3);
+            position: relative; overflow: hidden;
+        }
+        .btn-login:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(79,110,247,0.4);
+        }
+        .btn-login:active { transform: scale(0.97); }
+        .btn-login:disabled { background: #cbd5e1; cursor: not-allowed; box-shadow: none; transform: none; }
+
+        .error-msg {
+            color: #ef4444; text-align: center; font-size: 13px;
+            margin-top: 14px; display: none;
+            padding: 10px; background: #fef2f2;
+            border-radius: 8px; border: 1px solid #fecaca;
+        }
+        .error-msg.show { display: block; animation: shake 0.4s ease; }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-6px); }
+            75% { transform: translateX(6px); }
+        }
+
+        .hint {
+            text-align: center; margin-top: 24px;
+            font-size: 12px; color: #94a3b8;
+            padding: 10px; background: #f8fafc;
+            border-radius: 8px;
+        }
     </style>
 </head>
 <body>
+    <div class="bg-pattern"></div>
+    <div class="bg-grid"></div>
+    <div class="bg-orb"></div>
+    <div class="bg-orb"></div>
+    <div class="bg-orb"></div>
+
     <div class="login-box">
-        <h1>大模型数据防护能力平台</h1>
+        <div class="login-logo">🛡</div>
+        <h1>大模型数据防护平台</h1>
         <p class="subtitle">请登录以继续</p>
         <div class="form-group">
             <label>用户名</label>
-            <input type="text" id="username" placeholder="请输入用户名" value="admin" autocomplete="username">
+            <div class="input-wrap">
+                <span class="input-icon">👤</span>
+                <input type="text" id="username" placeholder="请输入用户名" value="admin" autocomplete="username">
+            </div>
         </div>
         <div class="form-group">
             <label>密码</label>
-            <input type="password" id="password" placeholder="请输入密码" value="admin123" autocomplete="current-password">
+            <div class="input-wrap">
+                <span class="input-icon">🔒</span>
+                <input type="password" id="password" placeholder="请输入密码" value="admin123" autocomplete="current-password">
+            </div>
         </div>
         <button class="btn-login" id="loginBtn" onclick="doLogin()">登 录</button>
         <div class="error-msg" id="errorMsg"></div>
         <p class="hint">默认管理员账号: admin / admin123</p>
     </div>
+
     <script>
-        // 回车键触发登录
         document.getElementById('password').addEventListener('keydown', function(e) {
             if (e.key === 'Enter') doLogin();
         });

@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+{% block title %}安全规则 - 大模型数据防护能力平台{% endblock %}
+{% block content %}
+<style>
+    .tab-nav {
+        display: flex; gap: 0; margin-bottom: 20px;
+        border-bottom: 2px solid var(--border);
+        position: relative;
+    }
+    .tab-nav::after {
+        content: '';
+        position: absolute;
+        bottom: -2px; left: 0;
+        height: 2px;
+        background: var(--primary);
+        transition: left 0.3s ease, width 0.3s ease;
+        width: 0;
+    }
+    .tab-btn {
+        padding: 10px 24px; border: none; background: none;
+        font-size: 14px; color: var(--text-muted); cursor: pointer;
+        border-bottom: 2px solid transparent; margin-bottom: -2px;
+        transition: all var(--transition); font-weight: 500;
+        font-family: inherit; position: relative; z-index: 1;
+    }
+    .tab-btn:hover { color: var(--primary); }
+    .tab-btn.active { color: var(--primary); font-weight: 600; }
+    .tab-panel { display: none; animation: fadeSlide 0.3s ease; }
+    .tab-panel.active { display: block; }
+    @keyframes fadeSlide { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    .alg-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; font-size: 13px; color: var(--text-secondary); }
+    .alg-card {
+        padding: 14px; background: #fff; border-radius: 10px;
+        border: 1px solid var(--border); transition: all var(--transition);
+    }
+    .alg-card:hover { border-color: var(--primary); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+    .alg-card strong { display: block; margin-bottom: 4px; color: var(--text); }
+    .alg-card .alg-icon { font-size: 20px; margin-bottom: 6px; }
+
+    .section-bar {
+        display: flex; justify-content: space-between; align-items: center;
+        margin-bottom: 16px; flex-wrap: wrap; gap: 10px;
+    }
+    .section-bar .desc { font-size: 13px; color: var(--text-muted); }
+    .info-box {
+        background: #f8fafc; border-radius: 10px; padding: 16px;
+        margin-top: 20px; border: 1px solid var(--border);
+    }
+    .info-box h3 { font-size: 14px; margin-bottom: 12px; color: var(--text); font-weight: 600; }
+</style>
+
+<div class="card">
+    <div class="flex-between" style="margin-bottom: 0;">
+        <div>
+            <h2>🛡 安全规则管理</h2>
+            <p class="text-muted" style="margin-top: 4px;">统一管理敏感数据识别规则与脱敏策略，定义检测模式与处理方式</p>
+        </div>
+    </div>
+
+    <!-- 标签页切换 -->
+    <div class="tab-nav">
+        <button class="tab-btn active" onclick="switchTab('rules')">🔍 识别规则</button>
+        <button class="tab-btn" onclick="switchTab('policies')">🔐 脱敏策略</button>
+    </div>
+
+    <!-- ========== 识别规则面板 ========== -->
+    <div id="tab-rules" class="tab-panel active">
+        <div class="section-bar">
+            <span class="desc">定义用于检测敏感信息的正则表达式或关键词规则</span>
+            <div class="flex-center">
+                <button class="btn btn-outline btn-sm" onclick="reloadRules()">🔄 刷新到内存</button>
+                <button class="btn btn-primary" onclick="openModal('addModal')">＋ 添加规则</button>
+            </div>
+        </div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th><th>规则名称</th><th>类型</th><th>匹配模式</th><th>敏感级别</th><th>分类</th><th>状态</th><th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rule in rules %}
+                    <tr>
+                        <td><span class="code">{{ rule.id }}</span></td>
+                        <td><strong>{{ rule.name }}</strong></td>
+                        <td><span class="tag tag-info">{{ '正则' if rule.rule_type == 'regex' else '关键词' }}</span></td>
+                        <td class="ellipsis" style="max-width:240px;" title="{{ rule.pattern }}"><code class="code">{{ rule.pattern }}</code></td>
+                        <td>
+                            {% if rule.sensitivity_level == 'high' %}
+                            <span class="tag tag-high">🔴 高</span>
+                            {% elif rule.sensitivity_level == 'medium' %}
+                            <span class="tag tag-medium">🟠 中</span>
+                            {% else %}
+                            <span class="tag tag-low">🟢 低</span>
+                            {% endif %}
+                        </td>
+                        <td><span class="tag tag-{{ rule.category }}">{{ rule.category }}</span></td>
+                        <td>
+                            <span class="status-indicator">
+                                <span class="status-dot {{ 'on' if rule.enabled else 'off' }}"></span>
+                                {{ '启用' if rule.enabled else '禁用' }}
+                            </span>
+                        </td>
+                        <td>
+                            <button class="btn btn-outline btn-xs" onclick="toggleRule({{ rule.id }}, {{ rule.enabled }})">
+                                {{ '禁用' if rule.enabled else '启用' }}
+                            </button>
+                            <button class="btn btn-danger btn-xs" onclick="deleteRule({{ rule.id }})">删除</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% if not rules %}
+                    <tr><td colspan="8" class="empty"><div class="empty-icon">📭</div>暂无规则，请点击"添加规则"创建</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ========== 脱敏策略面板 ========== -->
+    <div id="tab-policies" class="tab-panel">
+        <div style="margin-bottom: 16px;">
+            <span class="desc">定义检测到敏感信息后的脱敏处理方式，支持掩码、替换、加密、哈希、泛化等算法</span>
+        </div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr><th>ID</th><th>策略名称</th><th>关联规则</th><th>脱敏算法</th><th>掩码配置</th><th>状态</th><th>操作</th></tr>
+                </thead>
+                <tbody>
+                    {% for p in policies %}
+                    <tr>
+                        <td><span class="code">{{ p.id }}</span></td>
+                        <td><strong>{{ p.name }}</strong></td>
+                        <td><span class="tag tag-info">{{ p.rule_name or '—' }}</span></td>
+                        <td>
+                            <select onchange="updateMethod({{ p.id }}, this.value)" style="border: 1.5px solid var(--border); border-radius: 6px; padding: 5px 10px; font-size: 12px; font-family: inherit; cursor: pointer; transition: all var(--transition);">
+                                <option value="mask" {% if p.method == 'mask' %}selected{% endif %}>掩码 (mask)</option>
+                                <option value="replace" {% if p.method == 'replace' %}selected{% endif %}>替换 (replace)</option>
+                                <option value="encrypt" {% if p.method == 'encrypt' %}selected{% endif %}>加密 (encrypt)</option>
+                                <option value="hash" {% if p.method == 'hash' %}selected{% endif %}>哈希 (hash)</option>
+                                <option value="generalize" {% if p.method == 'generalize' %}selected{% endif %}>泛化 (generalize)</option>
+                            </select>
+                        </td>
+                        <td><code class="code" style="max-width:200px; display:inline-block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ p.mask_config }}">{{ p.mask_config }}</code></td>
+                        <td>
+                            <span class="status-indicator">
+                                <span class="status-dot {{ 'on' if p.enabled else 'off' }}"></span>
+                                {{ '启用' if p.enabled else '禁用' }}
+                            </span>
+                        </td>
+                        <td>
+                            <button class="btn btn-outline btn-xs" onclick="togglePolicy({{ p.id }}, {{ p.enabled }})">
+                                {{ '禁用' if p.enabled else '启用' }}
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% if not policies %}
+                    <tr><td colspan="7" class="empty"><div class="empty-icon">📭</div>暂无脱敏策略，请先添加识别规则</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="info-box">
+            <h3>📖 算法说明</h3>
+            <div class="alg-grid">
+                <div class="alg-card">
+                    <div class="alg-icon">🎭</div>
+                    <strong>掩码 (mask)</strong>
+                    <span class="text-muted">保留首尾若干字符，中间用 * 替换</span><br>
+                    <span class="code">138****5678</span>
+                </div>
+                <div class="alg-card">
+                    <div class="alg-icon">🔄</div>
+                    <strong>替换 (replace)</strong>
+                    <span class="text-muted">用固定字符替换整个敏感信息</span><br>
+                    <span class="code">[手机号已隐藏]</span>
+                </div>
+                <div class="alg-card">
+                    <div class="alg-icon">🔒</div>
+                    <strong>加密 (encrypt)</strong>
+                    <span class="text-muted">使用 AES 加密，可解密恢复</span><br>
+                    <span class="code">iv2xP9...WQ==</span>
+                </div>
+                <div class="alg-card">
+                    <div class="alg-icon">🔑</div>
+                    <strong>哈希 (hash)</strong>
+                    <span class="text-muted">SHA256 单向哈希，不可恢复</span><br>
+                    <span class="code">a1b2c3...d4e5</span>
+                </div>
+                <div class="alg-card">
+                    <div class="alg-icon">🌐</div>
+                    <strong>泛化 (generalize)</strong>
+                    <span class="text-muted">降低精度，如精确坐标改为城市</span><br>
+                    <span class="code">北京市</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加规则弹窗 -->
+<div id="addModal" class="modal-overlay">
+    <div class="modal">
+        <h3>＋ 添加识别规则</h3>
+        <form onsubmit="submitRule(event)">
+            <div class="form-row">
+                <div class="form-group"><label>规则名称 *</label><input name="name" required placeholder="如：身份证号"><div class="help-text">用于标识该规则的名称</div></div>
+                <div class="form-group"><label>规则类型</label><select name="rule_type"><option value="regex">正则表达式</option><option value="keyword">关键词</option></select><div class="help-text">正则表达式灵活度高，关键词匹配速度快</div></div>
+            </div>
+            <div class="form-group"><label>匹配模式 *</label><input name="pattern" required placeholder="如：1[3-9]\d{9}"><div class="help-text">正则表达式或关键词，用于匹配敏感内容</div></div>
+            <div class="form-group"><label>描述</label><input name="description" placeholder="该规则的用途说明"></div>
+            <div class="form-row">
+                <div class="form-group"><label>敏感级别</label><select name="sensitivity_level"><option value="high">高 — 直接阻断</option><option value="medium" selected>中 — 脱敏后放行</option><option value="low">低 — 仅记录</option></select></div>
+                <div class="form-group"><label>分类</label><select name="category"><option value="personal">个人隐私</option><option value="business">商业机密</option><option value="credential">凭证信息</option><option value="network">网络信息</option></select></div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn" onclick="closeModal('addModal')">取消</button>
+                <button type="submit" class="btn btn-primary">确认添加</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
+    document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
+    var panel = document.getElementById(`tab-${tab}`);
+    panel.style.display = 'block';
+    setTimeout(() => panel.classList.add('active'), 10);
+}
+
+async function submitRule(e) {
+    e.preventDefault();
+    const form = e.target;
+    const data = Object.fromEntries(new FormData(form));
+    const res = await fetch('/api/rules', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+    if (res.ok) { showToast('规则添加成功', 'success'); closeModal('addModal'); location.reload(); }
+    else { const err = await res.json(); showToast(err.error || '添加失败', 'error'); }
+}
+async function toggleRule(id, enabled) {
+    await fetch(`/api/rules/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({enabled: enabled ? 0 : 1}) });
+    showToast(enabled ? '规则已禁用' : '规则已启用', 'info');
+    location.reload();
+}
+async function deleteRule(id) {
+    if (!confirm('确认删除该规则？此操作不可恢复。')) return;
+    await fetch(`/api/rules/${id}`, { method: 'DELETE' });
+    showToast('规则已删除', 'success');
+    location.reload();
+}
+async function reloadRules() {
+    await fetch('/api/rules/reload', { method: 'POST' });
+    showToast('规则已刷新到内存', 'success');
+}
+async function updateMethod(id, method) {
+    await fetch(`/api/policies/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({method}) });
+    showToast('脱敏算法已更新', 'success');
+}
+async function togglePolicy(id, enabled) {
+    await fetch(`/api/policies/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({enabled: enabled ? 0 : 1}) });
+    showToast(enabled ? '策略已禁用' : '策略已启用', 'info');
+    location.reload();
+}
+</script>
+{% endblock %}

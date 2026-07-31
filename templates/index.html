@@ -4,20 +4,38 @@
 <style>
     .chart-row { display: flex; gap: 20px; margin-bottom: 20px; }
     .chart-row .card { flex: 1; }
-    .chart-row .card canvas { max-height: 320px; }
-    .date-range { display: flex; gap: 8px; margin-bottom: 14px; align-items: center; }
-    .date-range button { padding: 6px 16px; border: 1px solid #d0d0d0; border-radius: 20px; background: #fff; font-size: 13px; cursor: pointer; color: #555; transition: all 0.2s; }
-    .date-range button:hover { border-color: #1a73e8; color: #1a73e8; }
-    .date-range button.active { background: #1a73e8; color: #fff; border-color: #1a73e8; }
-    .date-range .range-label { font-size: 13px; color: #888; margin-right: 4px; }
-    .welcome-banner { background: linear-gradient(135deg, #e8f0fe 0%, #f0f4ff 100%); border-radius: 12px; padding: 16px 24px; margin-bottom: 20px; display: flex; align-items: center; gap: 16px; border: 1px solid #d0e0ff; }
-    .welcome-banner .banner-icon { font-size: 32px; }
-    .welcome-banner .banner-text h3 { color: #1a73e8; font-size: 16px; margin-bottom: 4px; }
-    .welcome-banner .banner-text p { color: #555; font-size: 13px; }
+    .chart-row .card canvas { max-height: 300px; }
+    .date-range { display: flex; gap: 6px; margin-bottom: 14px; align-items: center; }
+    .date-range button {
+        padding: 6px 16px; border: 1.5px solid #e2e8f0; border-radius: 20px;
+        background: #fff; font-size: 13px; cursor: pointer; color: #64748b;
+        transition: all 0.22s; font-weight: 500; font-family: inherit;
+    }
+    .date-range button:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+    .date-range button.active { background: var(--primary); color: #fff; border-color: var(--primary); font-weight: 600; }
+    .date-range .range-label { font-size: 13px; color: var(--text-muted); margin-right: 4px; font-weight: 500; }
+
+    .welcome-banner {
+        background: linear-gradient(135deg, #eef1ff 0%, #f0f4ff 50%, #faf5ff 100%);
+        border-radius: var(--radius-lg); padding: 18px 24px; margin-bottom: 20px;
+        display: flex; align-items: center; gap: 16px;
+        border: 1px solid #dde4ff;
+    }
+    .welcome-banner .banner-icon {
+        width: 48px; height: 48px; border-radius: 14px;
+        background: linear-gradient(135deg, var(--primary), #6366f1);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 24px; box-shadow: 0 4px 12px var(--primary-glow);
+    }
+    .welcome-banner .banner-text h3 { color: var(--primary); font-size: 16px; margin-bottom: 4px; font-weight: 600; }
+    .welcome-banner .banner-text p { color: #64748b; font-size: 13px; }
+
+    .status-row { display: flex; gap: 24px; margin-top: 16px; font-size: 13px; color: var(--text-secondary); flex-wrap: wrap; }
+    .status-row .status-item { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: #f8fafc; border-radius: 8px; border: 1px solid #e8ecf3; }
 </style>
 
 {% if error %}
-<div style="background: #ffebee; color: #c62828; padding: 12px 20px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; display: flex; align-items: center; gap: 8px;">
+<div style="background: #fef2f2; color: #dc2626; padding: 12px 20px; border-radius: 10px; margin-bottom: 16px; font-size: 14px; display: flex; align-items: center; gap: 8px; border: 1px solid #fecaca;">
     <span>⚠</span> {{ error }}
 </div>
 {% endif %}
@@ -88,12 +106,12 @@
         </div>
     </div>
     <div class="chart-row">
-        <div style="flex: 1;">
-            <h3 style="font-size: 14px; color: #666; margin-bottom: 10px;">请求总量趋势</h3>
+        <div style="flex: 1; min-width: 0;">
+            <h3 style="font-size: 14px; color: var(--text-secondary); margin-bottom: 10px; font-weight: 600;">请求总量趋势</h3>
             <canvas id="totalChart" style="max-height: 280px;"></canvas>
         </div>
-        <div style="flex: 1;">
-            <h3 style="font-size: 14px; color: #666; margin-bottom: 10px;">分类趋势（放行 / 脱敏 / 阻断）</h3>
+        <div style="flex: 1; min-width: 0;">
+            <h3 style="font-size: 14px; color: var(--text-secondary); margin-bottom: 10px; font-weight: 600;">分类趋势（放行 / 脱敏 / 阻断）</h3>
             <canvas id="detailChart" style="max-height: 280px;"></canvas>
         </div>
     </div>
@@ -102,15 +120,15 @@
 <!-- 系统概述 -->
 <div class="card">
     <h2>📋 系统概述</h2>
-    <p style="line-height: 2; font-size: 14px; color: #555;">
+    <p style="line-height: 2; font-size: 14px; color: var(--text-secondary);">
         本平台构建了一套覆盖<strong>"输入 → 处理 → 输出"</strong>全链路的大模型数据安全防护体系。
         通过<strong>实时识别</strong>、<strong>智能脱敏</strong>与<strong>行为阻断</strong>三重机制，
         在用户与 AI 大模型交互过程中自动检测并处理敏感信息，确保所有数据在进入大模型前已完成脱敏，从根源上切断信息泄露风险。
     </p>
-    <div style="display: flex; gap: 24px; margin-top: 16px; font-size: 13px; color: #888;">
-        <div class="flex-center"><span class="status-dot on"></span> 安全网关运行中</div>
-        <div class="flex-center"><span class="status-dot on"></span> 审计日志记录中</div>
-        <div class="flex-center"><span class="status-dot on"></span> 敏感数据识别引擎就绪</div>
+    <div class="status-row">
+        <div class="status-item"><span class="status-dot on"></span> 安全网关运行中</div>
+        <div class="status-item"><span class="status-dot on"></span> 审计日志记录中</div>
+        <div class="status-item"><span class="status-dot on"></span> 敏感数据识别引擎就绪</div>
     </div>
 </div>
 
@@ -154,22 +172,30 @@ function drawTotalChart(labels, data) {
             datasets: [{
                 label: '总请求数',
                 data: data,
-                borderColor: '#1a73e8',
-                backgroundColor: 'rgba(26, 115, 232, 0.08)',
+                borderColor: '#4f6ef7',
+                backgroundColor: function(context) {
+                    var chart = context.chart;
+                    var gradient = chart.ctx.createLinearGradient(0, 0, 0, chart.height);
+                    gradient.addColorStop(0, 'rgba(79,110,247,0.15)');
+                    gradient.addColorStop(1, 'rgba(79,110,247,0.01)');
+                    return gradient;
+                },
                 fill: true,
-                tension: 0.3,
+                tension: 0.35,
                 pointRadius: 3,
                 pointHoverRadius: 6,
-                borderWidth: 2,
+                pointBackgroundColor: '#4f6ef7',
+                borderWidth: 2.5,
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
+            interaction: { intersect: false, mode: 'index' },
+            plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1e293b', cornerRadius: 8, padding: 10 } },
             scales: {
-                y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 }, grid: { color: '#f0f0f0' } },
-                x: { grid: { display: false }, ticks: { maxTicksLimit: 10 } }
+                y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0, font: { size: 11 } }, grid: { color: '#f1f5f9' }, border: { dash: [4, 4] } },
+                x: { grid: { display: false }, ticks: { maxTicksLimit: 10, font: { size: 11 } } }
             }
         }
     });
@@ -183,18 +209,22 @@ function drawDetailChart(labels, passed, desensitized, blocked) {
         data: {
             labels: labels,
             datasets: [
-                { label: '放行', data: passed, borderColor: '#43a047', backgroundColor: 'rgba(67,160,71,0.05)', fill: false, tension: 0.3, pointRadius: 2, borderWidth: 2 },
-                { label: '脱敏', data: desensitized, borderColor: '#e65100', backgroundColor: 'rgba(230,81,0,0.05)', fill: false, tension: 0.3, pointRadius: 2, borderWidth: 2 },
-                { label: '阻断', data: blocked, borderColor: '#e53935', backgroundColor: 'rgba(229,57,53,0.05)', fill: false, tension: 0.3, pointRadius: 2, borderWidth: 2 }
+                { label: '放行', data: passed, borderColor: '#22c55e', backgroundColor: 'transparent', tension: 0.35, pointRadius: 2.5, borderWidth: 2.5, pointBackgroundColor: '#22c55e' },
+                { label: '脱敏', data: desensitized, borderColor: '#f59e0b', backgroundColor: 'transparent', tension: 0.35, pointRadius: 2.5, borderWidth: 2.5, pointBackgroundColor: '#f59e0b' },
+                { label: '阻断', data: blocked, borderColor: '#ef4444', backgroundColor: 'transparent', tension: 0.35, pointRadius: 2.5, borderWidth: 2.5, pointBackgroundColor: '#ef4444' }
             ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20, boxWidth: 10 } } },
+            interaction: { intersect: false, mode: 'index' },
+            plugins: {
+                legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20, boxWidth: 10, font: { size: 11 } } },
+                tooltip: { backgroundColor: '#1e293b', cornerRadius: 8, padding: 10 }
+            },
             scales: {
-                y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 }, grid: { color: '#f0f0f0' } },
-                x: { grid: { display: false }, ticks: { maxTicksLimit: 10 } }
+                y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0, font: { size: 11 } }, grid: { color: '#f1f5f9' }, border: { dash: [4, 4] } },
+                x: { grid: { display: false }, ticks: { maxTicksLimit: 10, font: { size: 11 } } }
             }
         }
     });

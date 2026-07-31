@@ -36,7 +36,7 @@
                             {{ '启用' if w.enabled else '禁用' }}
                         </span>
                     </td>
-                    <td><button class="btn btn-danger btn-xs" onclick="delWl({{ w.id }})">🗑 删除</button></td>
+                    <td><button class="btn btn-danger btn-xs" onclick="delWl({{ w.id }})">删除</button></td>
                 </tr>
                 {% endfor %}
                 {% if not whitelist %}

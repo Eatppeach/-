@@ -111,6 +111,15 @@ def policies_page():
     return render_template("policies.html", policies=policies)
 
 
+@app.route("/security-rules")
+@login_required
+@admin_required
+def security_rules_page():
+    rules = get_all_rules()
+    policies = get_all_policies()
+    return render_template("security_rules.html", rules=rules, policies=policies)
+
+
 @app.route("/whitelist")
 @login_required
 @admin_required
@@ -342,11 +351,69 @@ def api_protect():
     })
 
 
+@app.route("/api/upload", methods=["POST"])
+@login_required
+def api_upload_file():
+    """文件上传解析接口 — 提取 Word/PDF 文本内容"""
+    if "file" not in request.files:
+        return jsonify({"error": "未选择文件"}), 400
+
+    file = request.files["file"]
+    if file.filename == "":
+        return jsonify({"error": "文件名为空"}), 400
+
+    filename = file.filename.lower()
+    allowed_extensions = (".docx", ".pdf", ".txt", ".md")
+    if not filename.endswith(allowed_extensions):
+        return jsonify({"error": f"不支持的文件类型，仅支持: {', '.join(allowed_extensions)}"}), 400
+
+    try:
+        file_bytes = file.read()
+        text = ""
+
+        if filename.endswith(".docx"):
+            from docx import Document
+            from io import BytesIO
+            doc = Document(BytesIO(file_bytes))
+            text = "\n".join([p.text for p in doc.paragraphs if p.text.strip()])
+
+        elif filename.endswith(".pdf"):
+            import fitz
+            doc = fitz.open(stream=file_bytes, filetype="pdf")
+            text = "\n".join([page.get_text() for page in doc])
+            doc.close()
+
+        elif filename.endswith(".txt") or filename.endswith(".md"):
+            text = file_bytes.decode("utf-8", errors="replace")
+
+        if not text.strip():
+            return jsonify({"error": "未能从文件中提取到文本内容"}), 400
+
+        # 限制最大字符数，防止超出 LLM 上下文窗口
+        max_chars = 30000
+        if len(text) > max_chars:
+            text = text[:max_chars] + f"\n\n[文档过长，已截断至前 {max_chars} 字符]"
+
+        return jsonify({
+            "filename": file.filename,
+            "text": text,
+            "char_count": len(text),
+        })
+
+    except Exception as e:
+        return jsonify({"error": f"文件解析失败: {str(e)}"}), 500
+
+
 @app.route("/api/gateway/chat", methods=["POST"])
 def api_chat_proxy():
     """大模型对话代理接口 — 完整安全处理 + 流式转发"""
     data = request.json
     user_input = data.get("message") or data.get("text", "")
+
+    # 文档内容拼接到用户消息前面
+    document_text = data.get("document_text", "")
+    if document_text:
+        user_input = f"以下是文档内容：\n{document_text}\n\n用户问题：{user_input}"
 
     messages = data.get("messages", [])
     if messages and not user_input:
