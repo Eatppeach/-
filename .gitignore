@@ -8,6 +8,8 @@ __pycache__/
 # 运行日志、临时文件
 logs/
 tmp/
+server.log
+server.err.log
 # 系统、编辑器文件
 .DS_Store
 *.sublime-workspace

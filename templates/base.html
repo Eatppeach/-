@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <meta name="theme-color" content="#10191f">
     <title>{% block title %}大模型数据防护能力平台{% endblock %}</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -62,18 +64,6 @@
             z-index: 100;
         }
         .header-left { display: flex; align-items: center; gap: 14px; }
-        .header-logo {
-            width: 38px; height: 38px;
-            background: rgba(255,255,255,0.15);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            backdrop-filter: blur(8px);
-            transition: transform var(--transition);
-        }
-        .header-logo:hover { transform: rotate(-5deg) scale(1.08); }
         .header h1 { font-size: 17px; font-weight: 600; letter-spacing: 0.3px; white-space: nowrap; }
         .header-right { display: flex; align-items: center; gap: 20px; }
         .user-info { display: flex; align-items: center; gap: 10px; font-size: 13px; }
@@ -88,6 +78,7 @@
         .user-avatar:hover { transform: scale(1.08); border-color: rgba(255,255,255,0.5); }
         .role-badge { padding: 3px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; letter-spacing: 0.3px; }
         .role-badge.admin { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #78350f; }
+        .role-badge.super_admin { background: linear-gradient(135deg, #c084fc, #a855f7); color: #fff; box-shadow: 0 0 10px rgba(168,85,247,0.4); }
         .role-badge.user { background: rgba(255,255,255,0.2); color: #fff; }
         .btn-logout {
             padding: 7px 18px; border-radius: 8px; font-size: 12px;
@@ -241,6 +232,7 @@
         .tag-business { background: #f5f3ff; color: #7c3aed; }
         .tag-network { background: #ecfeff; color: #0891b2; }
         .tag-credential { background: var(--danger-light); color: #b91c1c; }
+        .tag-prompt_injection { background: #fce4ec; color: #c62828; border: 1px solid #f48fb1; }
         .tag-default { background: #f8fafc; color: var(--text-secondary); }
         .tag-success { background: var(--success-light); color: #16a34a; }
         .tag-warning { background: var(--warning-light); color: #d97706; }
@@ -406,28 +398,37 @@
             .form-row { flex-direction: column; }
         }
     </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='product.css') }}">
 </head>
 <body>
     <!-- 头部 -->
     <div class="header">
         <div class="header-left">
-            <div class="header-logo">🛡</div>
-            <h1>大模型数据防护能力平台</h1>
+            <button class="mobile-nav-toggle" type="button" aria-label="打开导航" aria-controls="primaryNav" aria-expanded="false">
+                <span></span><span></span><span></span>
+            </button>
+            <a class="brand" href="/" aria-label="大模型数据防护能力平台首页">
+                <div class="brand-copy">
+                    <h1>大模型数据防护平台</h1>
+                    <span>LLM DATA PROTECTION</span>
+                </div>
+            </a>
         </div>
         <div class="header-right">
             <div class="user-info">
                 <div class="user-avatar">{{ session.username[0].upper() if session.username else '?' }}</div>
                 <div>
                     <div style="font-weight:600;">{{ session.username }}</div>
-                    <span class="role-badge {{ session.role }}">{{ '管理员' if session.role == 'admin' else '普通用户' }}</span>
+                    <span class="role-badge {{ session.role }}">{{ '超级管理员' if session.role == 'super_admin' else ('管理员' if session.role == 'admin' else '普通用户') }}</span>
                 </div>
             </div>
-            <a href="/logout" class="btn-logout">退出登录</a>
+            <a href="/logout" class="btn-logout">退出</a>
         </div>
     </div>
 
     <!-- 导航栏 -->
-    <div class="navbar">
+    <div class="navbar" id="primaryNav">
+        <div class="nav-section-label">工作台</div>
         <div class="nav">
             <a href="/" class="{% if request.path == '/' %}active{% endif %}">
                 <span class="nav-icon">📊</span> 仪表盘
@@ -436,7 +437,7 @@
             <a href="/chat" class="{% if request.path == '/chat' %}active{% endif %}">
                 <span class="nav-icon">💬</span> 实时对话
             </a>
-            {% if session.role == 'admin' %}
+            {% if session.role in ('admin', 'super_admin') %}
             <span class="nav-sep"></span>
             <a href="/security-rules" class="{% if request.path == '/security-rules' %}active{% endif %}">
                 <span class="nav-icon">🛡</span> 安全规则
@@ -455,8 +456,28 @@
             <a href="/demo" class="{% if request.path == '/demo' %}active{% endif %}">
                 <span class="nav-icon">🧪</span> 在线演示
             </a>
+            {% if session.role == 'admin' %}
+            <span class="nav-sep"></span>
+            <a href="/admin/users" class="{% if request.path == '/admin/users' %}active{% endif %}">
+                <span class="nav-icon">👥</span> 用户管理
+            </a>
+            {% endif %}
+            {% if session.role == 'super_admin' %}
+            <span class="nav-sep"></span>
+            <a href="/admin/global" class="{% if request.path == '/admin/global' %}active{% endif %}">
+                <span class="nav-icon">🌐</span> 全局视图
+            </a>
+            <a href="/admin/tenants" class="{% if request.path == '/admin/tenants' %}active{% endif %}">
+                <span class="nav-icon">🏢</span> 租户管理
+            </a>
+            {% endif %}
+        </div>
+        <div class="nav-meta">
+            <span class="status-dot on"></span>
+            <div><strong>防护服务正常</strong><small>策略实时生效</small></div>
         </div>
     </div>
+    <div class="nav-backdrop" aria-hidden="true"></div>
 
     <!-- 主体内容 -->
     <div class="container">
@@ -465,13 +486,38 @@
 
     <!-- 页脚 -->
     <div class="footer">
-        LLM Data Protection Platform v1.0 &nbsp;|&nbsp; 审计日志保留 180 天
+        <span>LLM Data Protection Platform v1.0</span><span>审计日志保留 180 天</span>
     </div>
 
     <!-- Toast -->
     <div id="toast" class="toast"></div>
 
     <script>
+        // ==================== CSRF Token 自动附加 ====================
+        (function() {
+            var csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            var originalFetch = window.fetch;
+            window.fetch = function(url, options) {
+                options = options || {};
+                // 仅对非 GET/HEAD 请求附加 CSRF Token
+                var method = (options.method || 'GET').toUpperCase();
+                if (method !== 'GET' && method !== 'HEAD' && csrfToken) {
+                    options.headers = options.headers || {};
+                    // 如果是 Headers 对象，需要特殊处理
+                    if (options.headers instanceof Headers) {
+                        if (!options.headers.has('X-CSRF-Token')) {
+                            options.headers.set('X-CSRF-Token', csrfToken);
+                        }
+                    } else {
+                        if (!options.headers['X-CSRF-Token']) {
+                            options.headers['X-CSRF-Token'] = csrfToken;
+                        }
+                    }
+                }
+                return originalFetch.call(this, url, options);
+            };
+        })();
+
         let toastTimer;
         function showToast(msg, type) {
             const t = document.getElementById('toast');
@@ -485,18 +531,41 @@
                 setTimeout(() => { t.style.display = 'none'; t.style.opacity = '1'; }, 300);
             }, 3200);
         }
-        function openModal(id) { document.getElementById(id).classList.add('show'); }
-        function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+        let modalTrigger = null;
+        function openModal(id) {
+            const overlay = document.getElementById(id);
+            if (!overlay) return;
+            modalTrigger = document.activeElement;
+            overlay.classList.add('show');
+            overlay.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('modal-open');
+            const dialog = overlay.querySelector('.modal');
+            if (dialog) {
+                dialog.setAttribute('role', 'dialog');
+                dialog.setAttribute('aria-modal', 'true');
+            }
+            const focusable = overlay.querySelector('input:not([type="hidden"]), select, textarea, button');
+            if (focusable) setTimeout(() => focusable.focus(), 60);
+        }
+        function closeModal(id) {
+            const overlay = document.getElementById(id);
+            if (!overlay) return;
+            overlay.classList.remove('show');
+            overlay.setAttribute('aria-hidden', 'true');
+            if (!document.querySelector('.modal-overlay.show')) document.body.classList.remove('modal-open');
+            if (modalTrigger && typeof modalTrigger.focus === 'function') modalTrigger.focus();
+        }
         document.addEventListener('click', function(e) {
             if (e.target.classList.contains('modal-overlay')) {
-                e.target.classList.remove('show');
+                closeModal(e.target.id);
             }
         });
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
-                document.querySelectorAll('.modal-overlay.show').forEach(m => m.classList.remove('show'));
+                document.querySelectorAll('.modal-overlay.show').forEach(m => closeModal(m.id));
             }
         });
     </script>
+    <script src="{{ url_for('static', filename='product.js') }}" defer></script>
 </body>
 </html>

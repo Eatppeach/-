@@ -70,8 +70,15 @@
             <span class="desc">定义用于检测敏感信息的正则表达式或关键词规则</span>
             <div class="flex-center">
                 <button class="btn btn-outline btn-sm" onclick="reloadRules()">🔄 刷新到内存</button>
-                <button class="btn btn-primary" onclick="openModal('addModal')">＋ 添加规则</button>
+                <button class="btn btn-primary" onclick="openAddModal()">＋ 添加规则</button>
             </div>
+        </div>
+
+        <!-- 分类子Tab -->
+        <div class="tab-nav" style="margin-bottom: 16px; border-bottom-width: 1px;">
+            <button class="tab-btn active" onclick="filterCategory('all', this)">📋 全部</button>
+            <button class="tab-btn" onclick="filterCategory('basic', this)">🔒 基础规则</button>
+            <button class="tab-btn" onclick="filterCategory('industry', this)">🏭 行业规则</button>
         </div>
 
         <div class="table-wrap">
@@ -81,11 +88,12 @@
                         <th>ID</th><th>规则名称</th><th>类型</th><th>匹配模式</th><th>敏感级别</th><th>分类</th><th>状态</th><th>操作</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="rules-tbody">
                     {% for rule in rules %}
-                    <tr>
+                    {% set _cats = rule.category or '' %}
+                    <tr data-category="{{ _cats }}">
                         <td><span class="code">{{ rule.id }}</span></td>
-                        <td><strong>{{ rule.name }}</strong></td>
+                        <td><strong>{{ rule.name }}</strong>{% if not rule.tenant_id %}<span class="tag" style="background:#e8f4fd;color:#0ea5e9;font-size:10px;margin-left:4px;">系统</span>{% endif %}</td>
                         <td><span class="tag tag-info">{{ '正则' if rule.rule_type == 'regex' else '关键词' }}</span></td>
                         <td class="ellipsis" style="max-width:240px;" title="{{ rule.pattern }}"><code class="code">{{ rule.pattern }}</code></td>
                         <td>
@@ -97,7 +105,7 @@
                             <span class="tag tag-low">🟢 低</span>
                             {% endif %}
                         </td>
-                        <td><span class="tag tag-{{ rule.category }}">{{ rule.category }}</span></td>
+                        <td><span class="tag tag-{{ _cats }}">{{ _cats }}</span></td>
                         <td>
                             <span class="status-indicator">
                                 <span class="status-dot {{ 'on' if rule.enabled else 'off' }}"></span>
@@ -112,12 +120,10 @@
                         </td>
                     </tr>
                     {% endfor %}
-                    {% if not rules %}
-                    <tr><td colspan="8" class="empty"><div class="empty-icon">📭</div>暂无规则，请点击"添加规则"创建</td></tr>
-                    {% endif %}
                 </tbody>
             </table>
         </div>
+        <div id="rules-empty" class="empty" style="display:none;"><div class="empty-icon">📭</div><span id="rules-empty-text">暂无规则</span></div>
     </div>
 
     <!-- ========== 脱敏策略面板 ========== -->
@@ -218,7 +224,17 @@
             <div class="form-group"><label>描述</label><input name="description" placeholder="该规则的用途说明"></div>
             <div class="form-row">
                 <div class="form-group"><label>敏感级别</label><select name="sensitivity_level"><option value="high">高 — 直接阻断</option><option value="medium" selected>中 — 脱敏后放行</option><option value="low">低 — 仅记录</option></select></div>
-                <div class="form-group"><label>分类</label><select name="category"><option value="personal">个人隐私</option><option value="business">商业机密</option><option value="credential">凭证信息</option><option value="network">网络信息</option></select></div>
+                <div class="form-group"><label>分类</label><select name="category" id="addCategory">
+                    <optgroup label="基础规则">
+                        <option value="personal">个人隐私</option>
+                        <option value="network">网络信息</option>
+                        <option value="credential">凭证信息</option>
+                        <option value="prompt_injection">🚨 Prompt注入</option>
+                    </optgroup>
+                    <optgroup label="行业规则">
+                        <option value="business">商业机密</option>
+                    </optgroup>
+                </select></div>
             </div>
             <div class="modal-actions">
                 <button type="button" class="btn" onclick="closeModal('addModal')">取消</button>
@@ -229,6 +245,11 @@
 </div>
 
 <script>
+var currentCategory = 'all';
+
+// 基础规则分类集合
+var BASIC_CATEGORIES = ['personal', 'network', 'credential', 'prompt_injection'];
+
 function switchTab(tab) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
@@ -238,35 +259,90 @@ function switchTab(tab) {
     setTimeout(() => panel.classList.add('active'), 10);
 }
 
+function filterCategory(cat, btn) {
+    currentCategory = cat;
+    // 更新子Tab高亮
+    btn.parentElement.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    var rows = document.querySelectorAll('#rules-tbody tr');
+    var visible = 0;
+    rows.forEach(function(row) {
+        var cat = row.getAttribute('data-category');
+        if (currentCategory === 'all') {
+            row.style.display = '';
+            visible++;
+        } else if (currentCategory === 'basic') {
+            if (BASIC_CATEGORIES.indexOf(cat) !== -1) {
+                row.style.display = '';
+                visible++;
+            } else {
+                row.style.display = 'none';
+            }
+        } else if (currentCategory === 'industry') {
+            if (BASIC_CATEGORIES.indexOf(cat) === -1) {
+                row.style.display = '';
+                visible++;
+            } else {
+                row.style.display = 'none';
+            }
+        }
+    });
+
+    // 空状态
+    var table = document.querySelector('#tab-rules .table-wrap');
+    var empty = document.getElementById('rules-empty');
+    if (visible === 0) {
+        table.style.display = 'none';
+        empty.style.display = 'block';
+        document.getElementById('rules-empty-text').textContent =
+            currentCategory === 'industry' ? '暂无行业规则，点击"添加规则"创建行业脱敏策略' : '暂无规则';
+    } else {
+        table.style.display = '';
+        empty.style.display = 'none';
+    }
+}
+
+function openAddModal() {
+    // 根据当前分类Tab预选分类
+    var sel = document.getElementById('addCategory');
+    if (currentCategory === 'industry') {
+        sel.value = 'business';
+    } else {
+        sel.value = 'personal';
+    }
+    openModal('addModal');
+}
+
 async function submitRule(e) {
     e.preventDefault();
     const form = e.target;
     const data = Object.fromEntries(new FormData(form));
-    const res = await fetch('/api/rules', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+    const res = await fetch('/api/rules', { method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content || ''}, body: JSON.stringify(data) });
     if (res.ok) { showToast('规则添加成功', 'success'); closeModal('addModal'); location.reload(); }
     else { const err = await res.json(); showToast(err.error || '添加失败', 'error'); }
 }
 async function toggleRule(id, enabled) {
-    await fetch(`/api/rules/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({enabled: enabled ? 0 : 1}) });
+    await fetch(`/api/rules/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content || ''}, body: JSON.stringify({enabled: enabled ? 0 : 1}) });
     showToast(enabled ? '规则已禁用' : '规则已启用', 'info');
     location.reload();
 }
 async function deleteRule(id) {
     if (!confirm('确认删除该规则？此操作不可恢复。')) return;
-    await fetch(`/api/rules/${id}`, { method: 'DELETE' });
+    await fetch(`/api/rules/${id}`, { method: 'DELETE', headers: {'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content || ''} });
     showToast('规则已删除', 'success');
     location.reload();
 }
 async function reloadRules() {
-    await fetch('/api/rules/reload', { method: 'POST' });
+    await fetch('/api/rules/reload', { method: 'POST', headers: {'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content || ''} });
     showToast('规则已刷新到内存', 'success');
 }
 async function updateMethod(id, method) {
-    await fetch(`/api/policies/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({method}) });
+    await fetch(`/api/policies/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content || ''}, body: JSON.stringify({method}) });
     showToast('脱敏算法已更新', 'success');
 }
 async function togglePolicy(id, enabled) {
-    await fetch(`/api/policies/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({enabled: enabled ? 0 : 1}) });
+    await fetch(`/api/policies/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content || ''}, body: JSON.stringify({enabled: enabled ? 0 : 1}) });
     showToast(enabled ? '策略已禁用' : '策略已启用', 'info');
     location.reload();
 }

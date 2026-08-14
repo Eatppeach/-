@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <meta name="theme-color" content="#10191f">
     <title>登录 - 大模型数据防护能力平台</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -73,17 +75,6 @@
             from { transform: translateY(24px) scale(0.96); opacity: 0; }
             to { transform: translateY(0) scale(1); opacity: 1; }
         }
-        .login-logo {
-            width: 56px; height: 56px;
-            background: linear-gradient(135deg, #4f6ef7, #6366f1);
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-            margin: 0 auto 16px;
-            box-shadow: 0 8px 24px rgba(79,110,247,0.35);
-        }
         .login-box h1 { text-align: center; font-size: 22px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
         .login-box .subtitle { text-align: center; color: #94a3b8; font-size: 13px; margin-bottom: 32px; }
 
@@ -96,16 +87,19 @@
             position: relative;
         }
         .form-group .input-icon {
-            position: absolute;
-            left: 14px; top: 50%;
-            transform: translateY(-50%);
-            font-size: 16px;
-            color: #94a3b8;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 5px;
+            font-size: 14px;
+            line-height: 1;
+            vertical-align: -1px;
+            color: #7f91aa;
             pointer-events: none;
             transition: color 0.2s;
         }
         .form-group input {
-            width: 100%; padding: 12px 14px 12px 42px;
+            width: 100%; padding: 12px 14px;
             border: 1.5px solid #e2e8f0;
             border-radius: 10px; font-size: 14px;
             font-family: inherit;
@@ -119,8 +113,7 @@
             background: #fff;
             box-shadow: 0 0 0 3px rgba(79,110,247,0.1);
         }
-        .form-group input:focus ~ .input-icon,
-        .form-group input:focus + .input-icon { color: #4f6ef7; }
+        .form-group:focus-within .input-icon { color: #1769e8; }
 
         .btn-login {
             width: 100%; padding: 13px;
@@ -158,9 +151,51 @@
             padding: 10px; background: #f8fafc;
             border-radius: 8px;
         }
+
+        .toggle-link {
+            text-align: center; margin-top: 16px; font-size: 13px; color: #64748b;
+        }
+        .toggle-link a {
+            color: #4f6ef7; text-decoration: none; font-weight: 600;
+            cursor: pointer; transition: color 0.2s;
+        }
+        .toggle-link a:hover { color: #3b5de7; }
+
+        .register-form { display: none; }
+        .register-form.show { display: block; }
+        .login-form.hide { display: none; }
+
+        .success-msg {
+            color: #16a34a; text-align: center; font-size: 13px;
+            margin-top: 14px; display: none;
+            padding: 10px; background: #f0fdf4;
+            border-radius: 8px; border: 1px solid #bbf7d0;
+        }
+        .success-msg.show { display: block; }
+    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='product.css') }}">
+    <style>
+        body.login-page { background: linear-gradient(135deg, #eaf3ff 0%, #f8fbff 55%, #e6f8fb 100%); }
+        .login-page .bg-pattern { background: radial-gradient(circle at 82% 18%, rgba(93,198,229,.18), transparent 24%), radial-gradient(circle at 14% 80%, rgba(81,137,240,.16), transparent 28%); }
+        .login-page .bg-grid { opacity: .25; background-size: 52px 52px; background-image: linear-gradient(rgba(60,124,212,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(60,124,212,.08) 1px, transparent 1px); }
+        .login-page .bg-orb { filter: blur(100px); opacity: .10; }
+        .login-page .bg-orb:nth-child(1) { background: #327cf0; }
+        .login-page .bg-orb:nth-child(2) { background: #20b3d1; }
+        .login-page .bg-orb:nth-child(3) { background: #68d6e6; opacity: .08; }
+        .login-page .login-box { width: min(420px, calc(100vw - 32px)); padding: 32px 36px 38px; border: 1px solid rgba(255,255,255,.92); border-radius: 22px; box-shadow: 0 24px 70px rgba(60,113,170,.16); }
+        .login-page .login-box h1 { font-size: 21px; letter-spacing: 0; }
+        .login-page .login-box .subtitle { margin-bottom: 28px; }
+        .login-page .form-group { margin-bottom: 16px; }
+        .login-page .form-group input { min-height: 44px; border-radius: 10px; background: #f8fbff; }
+        .login-page .form-group input:focus { border-color: #1769e8; box-shadow: 0 0 0 3px rgba(23,105,232,.13); }
+        .login-page .btn-login { min-height: 46px; border-radius: 999px; background: linear-gradient(135deg, #2679ed, #0fa7d0); box-shadow: 0 9px 20px rgba(23,105,232,.18); }
+        .login-page .btn-login:hover { background: linear-gradient(135deg, #1c68d8, #0a94bc); box-shadow: 0 11px 24px rgba(23,105,232,.22); transform: translateY(-1px); }
+        .login-page .hint { border: 1px solid #e2ebf6; background: #f7fbff; }
+        .login-page .toggle-link a { color: #1769e8; }
+        @media (max-width: 520px) { .login-page .login-box { padding: 30px 22px; } }
     </style>
 </head>
-<body>
+<body class="login-page">
     <div class="bg-pattern"></div>
     <div class="bg-grid"></div>
     <div class="bg-orb"></div>
@@ -168,29 +203,83 @@
     <div class="bg-orb"></div>
 
     <div class="login-box">
-        <div class="login-logo">🛡</div>
         <h1>大模型数据防护平台</h1>
-        <p class="subtitle">请登录以继续</p>
-        <div class="form-group">
-            <label>用户名</label>
-            <div class="input-wrap">
-                <span class="input-icon">👤</span>
-                <input type="text" id="username" placeholder="请输入用户名" value="admin" autocomplete="username">
+        <p class="subtitle" id="formSubtitle">请登录以继续</p>
+
+        <!-- 登录表单 -->
+        <div class="login-form" id="loginForm">
+            <div class="form-group">
+                <label>用户名 <span class="input-icon" aria-hidden="true">👤</span></label>
+                <div class="input-wrap">
+                    <input type="text" id="username" placeholder="请输入用户名" value="admin" autocomplete="username">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>密码 <span class="input-icon" aria-hidden="true">🔒</span></label>
+                <div class="input-wrap">
+                    <input type="password" id="password" placeholder="请输入密码" value="admin123" autocomplete="current-password">
+                </div>
+            </div>
+            <button class="btn-login" id="loginBtn" onclick="doLogin()">登 录</button>
+            <div class="error-msg" id="errorMsg"></div>
+            <div class="toggle-link">
+                没有账号？<a onclick="showRegister()">注册新账号</a>
+            </div>
+            <p class="hint">默认管理员账号: admin / admin123</p>
+        </div>
+
+        <!-- 注册表单 -->
+        <div class="register-form" id="registerForm">
+            <div class="form-group">
+                <label>用户名 <span class="input-icon" aria-hidden="true">👤</span></label>
+                <div class="input-wrap">
+                    <input type="text" id="regUsername" placeholder="请输入用户名（至少2位）" autocomplete="off">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>密码 <span class="input-icon" aria-hidden="true">🔒</span></label>
+                <div class="input-wrap">
+                    <input type="password" id="regPassword" placeholder="请输入密码（至少6位）" autocomplete="new-password">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>确认密码 <span class="input-icon" aria-hidden="true">🔒</span></label>
+                <div class="input-wrap">
+                    <input type="password" id="regPassword2" placeholder="请再次输入密码" autocomplete="new-password">
+                </div>
+            </div>
+            <button class="btn-login" id="registerBtn" onclick="doRegister()">注 册</button>
+            <div class="error-msg" id="regErrorMsg"></div>
+            <div class="toggle-link">
+                已有账号？<a onclick="showLogin()">返回登录</a>
             </div>
         </div>
-        <div class="form-group">
-            <label>密码</label>
-            <div class="input-wrap">
-                <span class="input-icon">🔒</span>
-                <input type="password" id="password" placeholder="请输入密码" value="admin123" autocomplete="current-password">
-            </div>
-        </div>
-        <button class="btn-login" id="loginBtn" onclick="doLogin()">登 录</button>
-        <div class="error-msg" id="errorMsg"></div>
-        <p class="hint">默认管理员账号: admin / admin123</p>
     </div>
 
     <script>
+        // ==================== CSRF Token 自动附加 ====================
+        (function() {
+            var csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            var originalFetch = window.fetch;
+            window.fetch = function(url, options) {
+                options = options || {};
+                var method = (options.method || 'GET').toUpperCase();
+                if (method !== 'GET' && method !== 'HEAD' && csrfToken) {
+                    options.headers = options.headers || {};
+                    if (options.headers instanceof Headers) {
+                        if (!options.headers.has('X-CSRF-Token')) {
+                            options.headers.set('X-CSRF-Token', csrfToken);
+                        }
+                    } else {
+                        if (!options.headers['X-CSRF-Token']) {
+                            options.headers['X-CSRF-Token'] = csrfToken;
+                        }
+                    }
+                }
+                return originalFetch.call(this, url, options);
+            };
+        })();
+
         document.getElementById('password').addEventListener('keydown', function(e) {
             if (e.key === 'Enter') doLogin();
         });
@@ -199,6 +288,25 @@
                 document.getElementById('password').focus();
             }
         });
+        document.getElementById('regPassword2').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') doRegister();
+        });
+
+        function showRegister() {
+            document.getElementById('loginForm').classList.add('hide');
+            document.getElementById('registerForm').classList.add('show');
+            document.getElementById('formSubtitle').textContent = '注册新账号';
+            document.getElementById('errorMsg').className = 'error-msg';
+            document.getElementById('regErrorMsg').className = 'error-msg';
+        }
+
+        function showLogin() {
+            document.getElementById('loginForm').classList.remove('hide');
+            document.getElementById('registerForm').classList.remove('show');
+            document.getElementById('formSubtitle').textContent = '请登录以继续';
+            document.getElementById('errorMsg').className = 'error-msg';
+            document.getElementById('regErrorMsg').className = 'error-msg';
+        }
 
         function doLogin() {
             var username = document.getElementById('username').value.trim();
@@ -237,6 +345,57 @@
                 err.className = 'error-msg show';
                 btn.disabled = false;
                 btn.textContent = '登 录';
+            });
+        }
+
+        function doRegister() {
+            var username = document.getElementById('regUsername').value.trim();
+            var password = document.getElementById('regPassword').value;
+            var password2 = document.getElementById('regPassword2').value;
+            var btn = document.getElementById('registerBtn');
+            var err = document.getElementById('regErrorMsg');
+
+            if (!username || username.length < 2) {
+                err.textContent = '用户名至少2个字符';
+                err.className = 'error-msg show';
+                return;
+            }
+            if (!password || password.length < 6) {
+                err.textContent = '密码至少6位';
+                err.className = 'error-msg show';
+                return;
+            }
+            if (password !== password2) {
+                err.textContent = '两次输入的密码不一致';
+                err.className = 'error-msg show';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '注册中...';
+            err.className = 'error-msg';
+
+            fetch('/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: username, password: password })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.ok) {
+                    location.href = '/';
+                } else {
+                    err.textContent = data.error || '注册失败';
+                    err.className = 'error-msg show';
+                    btn.disabled = false;
+                    btn.textContent = '注 册';
+                }
+            })
+            .catch(function() {
+                err.textContent = '网络错误，请重试';
+                err.className = 'error-msg show';
+                btn.disabled = false;
+                btn.textContent = '注 册';
             });
         }
     </script>

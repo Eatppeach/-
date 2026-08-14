@@ -5,18 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>大模型数据防护能力平台 — 系统架构图</title>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <link rel="stylesheet" href="static/product.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: #f0f2f5; color: #333; padding: 24px; }
+        body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: #f4f6f7; color: #182322; padding: 34px 20px; }
         .container { max-width: 1400px; margin: 0 auto; }
-        h1 { text-align: center; margin-bottom: 8px; font-size: 24px; color: #1a73e8; }
-        .subtitle { text-align: center; color: #888; margin-bottom: 32px; font-size: 14px; }
-        .diagram-box { background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); padding: 28px; margin-bottom: 28px; }
-        .diagram-box h2 { font-size: 18px; margin-bottom: 18px; color: #333; border-left: 4px solid #1a73e8; padding-left: 12px; }
+        h1 { text-align: center; margin-bottom: 8px; font-size: 25px; color: #0f766e; }
+        .subtitle { text-align: center; color: #7c8987; margin-bottom: 32px; font-size: 13px; }
+        .diagram-box { background: #fff; border: 1px solid #dfe5e5; border-radius: 8px; box-shadow: 0 1px 3px rgba(16,25,31,.06), 0 8px 24px rgba(16,25,31,.03); padding: 26px; margin-bottom: 20px; }
+        .diagram-box h2 { font-size: 17px; margin-bottom: 18px; color: #182322; border-left: 3px solid #0f766e; padding-left: 12px; }
         .mermaid { display: flex; justify-content: center; overflow-x: auto; }
-        .legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 16px; padding: 12px; background: #fafafa; border-radius: 8px; font-size: 13px; }
+        .legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 16px; padding: 12px; background: #f7f9f9; border: 1px solid #dfe5e5; border-radius: 7px; font-size: 13px; }
         .legend-item { display: flex; align-items: center; gap: 6px; }
         .legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+        @media (max-width: 700px) { body { padding: 20px 12px; } .diagram-box { padding: 16px; overflow-x: auto; } h1 { font-size: 20px; } }
     </style>
 </head>
 <body>

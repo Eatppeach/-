@@ -213,42 +213,66 @@ class SecurityGateway:
         return highest_block
 
     def _evaluate_condition(self, condition, scan_result):
-        """简易条件评估引擎"""
+        """简易条件评估引擎，支持 sensitivity_level + category + match_count 组合条件"""
         try:
-            # 构建评估上下文
             ctx = {
                 "sensitivity_level": scan_result.get("highest_level"),
                 "match_count": scan_result.get("match_count", 0),
                 "has_sensitive": scan_result.get("has_sensitive", False),
             }
 
-            # 简易条件解析
-            if "sensitivity_level" in condition and "high" in condition:
-                if ctx["sensitivity_level"] == "high":
-                    if "category" in condition and "credential" in condition:
-                        has_credential = any(
-                            m["category"] == "credential" for m in scan_result.get("matches", [])
-                        )
-                        if condition == "sensitivity_level == 'high' AND category == 'credential'":
-                            return ctx["sensitivity_level"] == "high" and has_credential
+            # 解析条件中的字段值
+            parsed = self._parse_condition(condition)
 
-                    # 检查是否仅匹配高危
-                    if "match_count" in condition:
-                        return ctx["match_count"] > 10
+            # 逐字段验证
+            if "sensitivity_level" in parsed:
+                expected_level = parsed["sensitivity_level"]
+                if ctx["sensitivity_level"] != expected_level:
+                    return False
 
-                return ctx["sensitivity_level"] == "high"
+            if "category" in parsed:
+                expected_category = parsed["category"]
+                has_category = any(
+                    m["category"] == expected_category for m in scan_result.get("matches", [])
+                )
+                if not has_category:
+                    return False
 
-            if "match_count" in condition:
-                if ">" in condition:
-                    threshold = int(condition.split(">")[1].strip())
-                    return ctx["match_count"] > threshold
+            if "match_count" in parsed:
+                op, threshold = parsed["match_count"]
+                if op == ">" and ctx["match_count"] <= threshold:
+                    return False
+                if op == ">=" and ctx["match_count"] < threshold:
+                    return False
 
-            if "sensitivity_level" in condition and "medium" in condition:
-                return ctx["sensitivity_level"] in ("medium", "high")
-
-            return False
+            return True
         except Exception:
             return False
+
+    def _parse_condition(self, condition):
+        """解析条件字符串，返回字段字典
+        支持格式: "sensitivity_level == 'high' AND category == 'credential'"
+        """
+        parsed = {}
+        parts = condition.split(" AND ")
+        for part in parts:
+            part = part.strip()
+            if "==" in part:
+                left, right = part.split("==", 1)
+                left = left.strip()
+                right = right.strip().strip("'\"")
+                parsed[left] = right
+            elif ">" in part:
+                left, right = part.split(">", 1)
+                left = left.strip()
+                right = int(right.strip())
+                parsed[left] = (">", right)
+            elif ">=" in part:
+                left, right = part.split(">=", 1)
+                left = left.strip()
+                right = int(right.strip())
+                parsed[left] = (">=", right)
+        return parsed
 
     def forward_to_llm(self, processed_input, upstream_url, api_key=None, model=None, stream=False, history=None):
         """将处理后的请求转发到大模型API"""

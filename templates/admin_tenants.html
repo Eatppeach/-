@@ -1,0 +1,448 @@
+{% extends "base.html" %}
+{% block title %}租户管理 - 大模型数据防护能力平台{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h2>🏢 租户管理</h2>
+        <p class="text-muted" style="margin-top: 4px;">管理系统中的租户，每个租户拥有独立的数据隔离空间和用户体系</p>
+    </div>
+    <button class="btn btn-primary" onclick="openCreateModal()">+ 创建租户</button>
+</div>
+
+<!-- 统计卡片 -->
+<div class="stats-row">
+    <div class="stat-card blue">
+        <div class="stat-icon blue">🏢</div>
+        <div class="stat-info">
+            <div class="num">{{ tenants|length }}</div>
+            <div class="label">租户总数</div>
+        </div>
+    </div>
+    <div class="stat-card green">
+        <div class="stat-icon green">✅</div>
+        <div class="stat-info">
+            <div class="num">{{ tenants|selectattr('status', 'equalto', 'active')|list|length }}</div>
+            <div class="label">活跃租户</div>
+        </div>
+    </div>
+    <div class="stat-card purple">
+        <div class="stat-icon purple">👥</div>
+        <div class="stat-info">
+            <div class="num">{{ tenants|sum(attribute='user_count') }}</div>
+            <div class="label">总用户数</div>
+        </div>
+    </div>
+</div>
+
+<!-- 租户列表 -->
+<div class="card">
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>租户名称</th>
+                    <th>描述</th>
+                    <th>联系人</th>
+                    <th>用户数</th>
+                    <th>最大用户</th>
+                    <th>速率限制</th>
+                    <th>状态</th>
+                    <th>创建时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in tenants %}
+                <tr>
+                    <td><span class="code">{{ t.id }}</span></td>
+                    <td><strong>{{ t.name }}</strong></td>
+                    <td class="ellipsis" style="max-width:160px;" title="{{ t.description or '' }}">{{ t.description or '-' }}</td>
+                    <td>{{ t.contact or '-' }}</td>
+                    <td><span class="tag tag-info">{{ t.user_count or 0 }}</span></td>
+                    <td>{{ t.max_users }}</td>
+                    <td>
+                        {% if t.rate_limit_enabled is none or t.rate_limit_enabled == 1 %}
+                        <span class="tag tag-success">{{ t.rate_limit_rpm or 60 }}次/分钟</span>
+                        {% else %}
+                        <span class="tag tag-warning">不限流</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="status-indicator">
+                            <span class="status-dot {{ 'on' if t.status == 'active' else 'off' }}"></span>
+                            {{ '活跃' if t.status == 'active' else '已禁用' }}
+                        </span>
+                    </td>
+                    <td class="text-muted">{{ t.created_at[:10] if t.created_at else '-' }}</td>
+                    <td>
+                        <button class="btn btn-outline btn-xs" onclick="openUserModal({{ t.id }}, '{{ t.name|e }}')" title="管理用户">👥</button>
+                        <button class="btn btn-outline btn-xs" onclick="openEditModal({{ t.id }}, '{{ t.name|e }}', '{{ (t.description or '')|e }}', '{{ (t.contact or '')|e }}', {{ t.max_users }}, '{{ t.status }}', {{ t.rate_limit_enabled or 1 }}, {{ t.rate_limit_rpm or 60 }})" title="编辑">✏️</button>
+                        <button class="btn btn-danger btn-xs" onclick="confirmDelete({{ t.id }}, '{{ t.name|e }}')" title="删除">🗑</button>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if not tenants %}
+                <tr><td colspan="10" class="empty"><div class="empty-icon">🏢</div>暂无租户，点击上方按钮创建第一个租户</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ==================== 创建租户弹窗 ==================== -->
+<div class="modal-overlay" id="createModal">
+    <div class="modal">
+        <h3>创建租户</h3>
+        <div class="form-group">
+            <label>租户名称 <span class="text-danger">*</span></label>
+            <input type="text" id="createName" placeholder="输入租户名称" maxlength="50">
+        </div>
+        <div class="form-group">
+            <label>描述</label>
+            <textarea id="createDesc" placeholder="租户描述信息（可选）" rows="2"></textarea>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>联系人</label>
+                <input type="text" id="createContact" placeholder="联系人邮箱或电话" maxlength="100">
+            </div>
+            <div class="form-group">
+                <label>最大用户数</label>
+                <input type="number" id="createMaxUsers" value="50" min="1" max="10000">
+                <span class="help-text">该租户允许创建的最大用户数量</span>
+            </div>
+        </div>
+        <div style="border-top: 1px solid var(--border); padding-top: 14px; margin-top: 6px;">
+            <h4 style="font-size: 13px; color: var(--text-secondary); margin-bottom: 10px;">⚡ 速率限制</h4>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>启用速率限制</label>
+                    <select id="createRateLimitEnabled">
+                        <option value="1">启用</option>
+                        <option value="0">关闭（不限流）</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>限制频率（次/分钟）</label>
+                    <input type="number" id="createRateLimitRpm" value="60" min="1" max="10000">
+                    <span class="help-text">该租户 API 网关每分钟最大请求数</span>
+                </div>
+            </div>
+        </div>
+        <div style="border-top: 1px solid var(--border); padding-top: 14px; margin-top: 6px;">
+            <h4 style="font-size: 13px; color: var(--text-secondary); margin-bottom: 10px;">🔑 初始管理员账号</h4>
+            <p class="help-text" style="margin-bottom: 12px;">创建租户时将自动创建该管理员账号，用于租户登录管理</p>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>管理员用户名 <span class="text-danger">*</span></label>
+                    <input type="text" id="createAdminUser" placeholder="如：admin_tenant1" maxlength="30">
+                </div>
+                <div class="form-group">
+                    <label>管理员密码 <span class="text-danger">*</span></label>
+                    <input type="password" id="createAdminPass" placeholder="至少6位" minlength="6">
+                </div>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-outline" onclick="closeModal('createModal')">取消</button>
+            <button class="btn btn-primary" onclick="doCreate()">确认创建</button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== 编辑租户弹窗 ==================== -->
+<div class="modal-overlay" id="editModal">
+    <div class="modal">
+        <h3>编辑租户</h3>
+        <input type="hidden" id="editId">
+        <div class="form-group">
+            <label>租户名称</label>
+            <input type="text" id="editName" placeholder="租户名称" maxlength="50">
+        </div>
+        <div class="form-group">
+            <label>描述</label>
+            <textarea id="editDesc" placeholder="租户描述信息" rows="2"></textarea>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>联系人</label>
+                <input type="text" id="editContact" placeholder="联系人邮箱或电话" maxlength="100">
+            </div>
+            <div class="form-group">
+                <label>最大用户数</label>
+                <input type="number" id="editMaxUsers" min="1" max="10000">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>状态</label>
+            <select id="editStatus">
+                <option value="active">活跃</option>
+                <option value="disabled">已禁用</option>
+            </select>
+        </div>
+        <div style="border-top: 1px solid var(--border); padding-top: 14px; margin-top: 6px;">
+            <h4 style="font-size: 13px; color: var(--text-secondary); margin-bottom: 10px;">⚡ 速率限制</h4>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>启用速率限制</label>
+                    <select id="editRateLimitEnabled">
+                        <option value="1">启用</option>
+                        <option value="0">关闭（不限流）</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>限制频率（次/分钟）</label>
+                    <input type="number" id="editRateLimitRpm" min="1" max="10000">
+                    <span class="help-text">该租户 API 网关每分钟最大请求数</span>
+                </div>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-outline" onclick="closeModal('editModal')">取消</button>
+            <button class="btn btn-primary" onclick="doUpdate()">保存修改</button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== 用户管理弹窗 ==================== -->
+<div class="modal-overlay" id="userModal">
+    <div class="modal" style="max-width: 640px;">
+        <h3 id="userModalTitle">租户用户管理</h3>
+        <input type="hidden" id="userTenantId">
+        <div id="userList" style="margin-bottom: 16px;"></div>
+        <div style="border-top: 1px solid var(--border); padding-top: 16px;">
+            <h4 style="font-size: 14px; margin-bottom: 12px;">添加用户</h4>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>用户名</label>
+                    <input type="text" id="newUserUsername" placeholder="用户名" maxlength="30">
+                </div>
+                <div class="form-group">
+                    <label>密码</label>
+                    <input type="password" id="newUserPassword" placeholder="密码（至少6位）" minlength="6">
+                </div>
+                <div class="form-group">
+                    <label>角色</label>
+                    <select id="newUserRole">
+                        <option value="user">普通用户</option>
+                        <option value="admin">租户管理员</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="doAddUser()">添加用户</button>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-outline" onclick="closeModal('userModal')">关闭</button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== 删除确认弹窗 ==================== -->
+<div class="modal-overlay" id="deleteModal">
+    <div class="modal">
+        <h3>确认删除</h3>
+        <input type="hidden" id="deleteId">
+        <p style="color: var(--text-secondary); font-size: 14px;">
+            确定要删除租户 <strong id="deleteName" style="color: var(--danger);"></strong> 吗？
+        </p>
+        <div class="form-group" style="margin-top: 14px;">
+            <label>请输入租户名称以确认 <span class="text-danger">*</span></label>
+            <input type="text" id="confirmDeleteName" placeholder="输入租户名称" autocomplete="off">
+        </div>
+        <p style="color: var(--danger); font-size: 13px; margin-top: 8px; padding: 10px; background: var(--danger-light); border-radius: 8px;">
+            ⚠️ 此操作将同时删除该租户下的所有用户、规则、策略、白名单和审计日志数据，不可恢复！
+        </p>
+        <div class="modal-actions">
+            <button class="btn btn-outline" onclick="closeModal('deleteModal')">取消</button>
+            <button class="btn btn-danger" id="deleteBtn" onclick="doDelete()">确认删除</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ==================== 创建租户 ====================
+function openCreateModal() {
+    document.getElementById('createName').value = '';
+    document.getElementById('createDesc').value = '';
+    document.getElementById('createContact').value = '';
+    document.getElementById('createMaxUsers').value = '50';
+    document.getElementById('createRateLimitEnabled').value = '1';
+    document.getElementById('createRateLimitRpm').value = '60';
+    document.getElementById('createAdminUser').value = '';
+    document.getElementById('createAdminPass').value = '';
+    openModal('createModal');
+}
+
+async function doCreate() {
+    const name = document.getElementById('createName').value.trim();
+    const adminUser = document.getElementById('createAdminUser').value.trim();
+    const adminPass = document.getElementById('createAdminPass').value;
+
+    if (!name) { showToast('请输入租户名称', 'warning'); return; }
+    if (!adminUser) { showToast('请输入管理员用户名', 'warning'); return; }
+    if (!adminPass || adminPass.length < 6) { showToast('管理员密码至少6位', 'warning'); return; }
+
+    const resp = await fetch('/api/tenants', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            name: name,
+            description: document.getElementById('createDesc').value.trim(),
+            contact: document.getElementById('createContact').value.trim(),
+            max_users: parseInt(document.getElementById('createMaxUsers').value) || 50,
+            rate_limit_enabled: document.getElementById('createRateLimitEnabled').value === '1',
+            rate_limit_rpm: parseInt(document.getElementById('createRateLimitRpm').value) || 60,
+            admin_username: adminUser,
+            admin_password: adminPass
+        })
+    });
+    const data = await resp.json();
+    if (resp.ok) {
+        showToast('租户创建成功，管理员账号已自动创建', 'success');
+        closeModal('createModal');
+        location.reload();
+    } else {
+        showToast(data.error || '创建失败', 'error');
+    }
+}
+
+// ==================== 编辑租户 ====================
+function openEditModal(id, name, desc, contact, maxUsers, status, rateLimitEnabled, rateLimitRpm) {
+    document.getElementById('editId').value = id;
+    document.getElementById('editName').value = name;
+    document.getElementById('editDesc').value = desc;
+    document.getElementById('editContact').value = contact;
+    document.getElementById('editMaxUsers').value = maxUsers;
+    document.getElementById('editStatus').value = status;
+    document.getElementById('editRateLimitEnabled').value = rateLimitEnabled ? '1' : '0';
+    document.getElementById('editRateLimitRpm').value = rateLimitRpm || 60;
+    openModal('editModal');
+}
+
+async function doUpdate() {
+    const id = document.getElementById('editId').value;
+    const data = {
+        name: document.getElementById('editName').value.trim(),
+        description: document.getElementById('editDesc').value.trim(),
+        contact: document.getElementById('editContact').value.trim(),
+        max_users: parseInt(document.getElementById('editMaxUsers').value) || 50,
+        status: document.getElementById('editStatus').value,
+        rate_limit_enabled: document.getElementById('editRateLimitEnabled').value === '1' ? 1 : 0,
+        rate_limit_rpm: parseInt(document.getElementById('editRateLimitRpm').value) || 60
+    };
+    const resp = await fetch('/api/tenants/' + id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+    if (resp.ok) {
+        showToast('租户信息已更新', 'success');
+        closeModal('editModal');
+        location.reload();
+    } else {
+        const err = await resp.json();
+        showToast(err.error || '更新失败', 'error');
+    }
+}
+
+// ==================== 删除租户 ====================
+function confirmDelete(id, name) {
+    document.getElementById('deleteId').value = id;
+    document.getElementById('deleteName').textContent = name;
+    document.getElementById('confirmDeleteName').value = '';
+    document.getElementById('deleteBtn').disabled = false;
+    openModal('deleteModal');
+}
+
+async function doDelete() {
+    const id = document.getElementById('deleteId').value;
+    const expectedName = document.getElementById('deleteName').textContent;
+    const confirmName = document.getElementById('confirmDeleteName').value.trim();
+
+    if (confirmName !== expectedName) {
+        showToast('租户名称输入不一致，请重新输入', 'error');
+        return;
+    }
+
+    const btn = document.getElementById('deleteBtn');
+    btn.disabled = true;
+    btn.textContent = '删除中...';
+
+    const resp = await fetch('/api/tenants/' + id, { method: 'DELETE' });
+    if (resp.ok) {
+        showToast('租户已删除', 'success');
+        closeModal('deleteModal');
+        location.reload();
+    } else {
+        showToast('删除失败', 'error');
+        btn.disabled = false;
+        btn.textContent = '确认删除';
+    }
+}
+
+// ==================== 用户管理 ====================
+async function openUserModal(tenantId, tenantName) {
+    document.getElementById('userTenantId').value = tenantId;
+    document.getElementById('userModalTitle').textContent = '👥 ' + tenantName + ' - 用户管理';
+    document.getElementById('newUserUsername').value = '';
+    document.getElementById('newUserPassword').value = '';
+    document.getElementById('newUserRole').value = 'user';
+    await loadUsers(tenantId);
+    openModal('userModal');
+}
+
+async function loadUsers(tenantId) {
+    const resp = await fetch('/api/tenants/' + tenantId + '/users');
+    const users = await resp.json();
+    const container = document.getElementById('userList');
+    if (!users.length) {
+        container.innerHTML = '<div class="empty" style="padding:24px;"><div class="empty-icon">👤</div>该租户下暂无用户</div>';
+        return;
+    }
+    let html = '<div class="table-wrap"><table><thead><tr><th>ID</th><th>用户名</th><th>角色</th><th>创建时间</th></tr></thead><tbody>';
+    users.forEach(u => {
+        const roleLabel = u.role === 'admin' ? '🔧 租户管理员' : '👤 普通用户';
+        html += `<tr>
+            <td><span class="code">${u.id}</span></td>
+            <td><strong>${escapeHtml(u.username)}</strong></td>
+            <td>${roleLabel}</td>
+            <td class="text-muted">${(u.created_at || '').substring(0, 10)}</td>
+        </tr>`;
+    });
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+}
+
+async function doAddUser() {
+    const tenantId = document.getElementById('userTenantId').value;
+    const username = document.getElementById('newUserUsername').value.trim();
+    const password = document.getElementById('newUserPassword').value;
+    const role = document.getElementById('newUserRole').value;
+
+    if (!username) { showToast('请输入用户名', 'warning'); return; }
+    if (!password || password.length < 6) { showToast('密码至少6位', 'warning'); return; }
+
+    const resp = await fetch('/api/tenants/' + tenantId + '/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, role })
+    });
+    if (resp.ok) {
+        showToast('用户创建成功', 'success');
+        document.getElementById('newUserUsername').value = '';
+        document.getElementById('newUserPassword').value = '';
+        await loadUsers(tenantId);
+    } else {
+        const err = await resp.json();
+        showToast(err.error || '创建失败', 'error');
+    }
+}
+
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+</script>
+{% endblock %}

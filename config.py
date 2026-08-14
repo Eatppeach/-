@@ -3,12 +3,12 @@
 import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATABASE_PATH = os.path.join(BASE_DIR, "data_protection.db")
+DATABASE_PATH = os.path.join(os.environ.get("TEMP", os.path.expanduser("~")), "data_protection.db")
 
 # 代理网关配置
 PROXY_HOST = "0.0.0.0"
 PROXY_PORT = 9090
-MANAGEMENT_PORT = 5000
+MANAGEMENT_PORT = 8080
 
 # 默认上游LLM API地址（可被代理请求的Header覆盖）
 DEFAULT_UPSTREAM_URL = "https://api.openai.com/v1/chat/completions"
