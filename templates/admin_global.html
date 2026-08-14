@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block title %}全局视图 - 大模型数据防护能力平台{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h2>🌐 跨租户全局视图</h2>
+        <p class="text-muted" style="margin-top: 4px;">查看所有租户的安全防护数据汇总与趋势分析</p>
+    </div>
+    <div style="display: flex; gap: 10px;">
+        <button class="btn btn-outline btn-sm" onclick="refreshData()">🔄 刷新数据</button>
+    </div>
+</div>
+
+<!-- 汇总统计卡片 -->
+<div class="stats-row" id="summaryCards" style="grid-template-columns: repeat(6, 1fr);">
+    <div class="stat-card blue"><div class="stat-icon blue">🏢</div><div class="stat-info"><div class="num">-</div><div class="label">租户总数</div></div></div>
+    <div class="stat-card green"><div class="stat-icon green">✅</div><div class="stat-info"><div class="num">-</div><div class="label">活跃租户</div></div></div>
+    <div class="stat-card purple"><div class="stat-icon purple">👥</div><div class="stat-info"><div class="num">-</div><div class="label">总用户数</div></div></div>
+    <div class="stat-card blue"><div class="stat-icon blue">📊</div><div class="stat-info"><div class="num">-</div><div class="label">总请求量</div></div></div>
+    <div class="stat-card orange"><div class="stat-icon orange">📅</div><div class="stat-info"><div class="num">-</div><div class="label">今日请求</div></div></div>
+    <div class="stat-card red"><div class="stat-icon red">🚫</div><div class="stat-info"><div class="num">-</div><div class="label">今日阻断</div></div></div>
+</div>
+
+<!-- 图表区：请求趋势 + Top 阻断租户 -->
+<div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 22px; margin-bottom: 22px;">
+    <!-- 最近7天请求趋势 -->
+    <div class="card">
+        <h2><span class="card-icon">📈</span> 最近7天请求趋势</h2>
+        <div id="trendChart" style="height: 260px; display: flex; align-items: flex-end; gap: 6px; padding: 10px 0;">
+            <div class="empty" style="width:100%;">加载中...</div>
+        </div>
+        <div style="display: flex; gap: 20px; justify-content: center; font-size: 12px; margin-top: 8px;">
+            <span style="display: flex; align-items: center; gap: 4px;"><span style="width:10px;height:10px;background:#4f6ef7;border-radius:2px;display:inline-block;"></span> 通过</span>
+            <span style="display: flex; align-items: center; gap: 4px;"><span style="width:10px;height:10px;background:#f59e0b;border-radius:2px;display:inline-block;"></span> 脱敏</span>
+            <span style="display: flex; align-items: center; gap: 4px;"><span style="width:10px;height:10px;background:#ef4444;border-radius:2px;display:inline-block;"></span> 阻断</span>
+        </div>
+    </div>
+
+    <!-- Top 阻断租户 -->
+    <div class="card">
+        <h2><span class="card-icon">🚫</span> 阻断请求 Top 5</h2>
+        <div id="topBlocked" style="padding: 10px 0;">
+            <div class="empty">加载中...</div>
+        </div>
+    </div>
+</div>
+
+<!-- 租户明细表 -->
+<div class="card">
+    <h2><span class="card-icon">📋</span> 各租户数据明细</h2>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>租户</th>
+                    <th>状态</th>
+                    <th>用户数</th>
+                    <th>请求量</th>
+                    <th>阻断数</th>
+                    <th>脱敏数</th>
+                    <th>阻断率</th>
+                </tr>
+            </thead>
+            <tbody id="tenantTableBody">
+                <tr><td colspan="7" class="empty">加载中...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+async function refreshData() {
+    try {
+        const resp = await fetch('/api/global/overview');
+        const data = await resp.json();
+        renderSummary(data.summary);
+        renderTrend(data.daily_trend);
+        renderTopBlocked(data.top_blocked);
+        renderTenantTable(data.tenants);
+    } catch (e) {
+        showToast('数据加载失败', 'error');
+    }
+}
+
+function renderSummary(s) {
+    const cards = document.querySelectorAll('#summaryCards .stat-info .num');
+    cards[0].textContent = s.total_tenants;
+    cards[1].textContent = s.active_tenants;
+    cards[2].textContent = s.total_users;
+    cards[3].textContent = s.total_requests;
+    cards[4].textContent = s.today_requests;
+    cards[5].textContent = s.today_blocked;
+}
+
+function renderTrend(trend) {
+    const container = document.getElementById('trendChart');
+    if (!trend.length) {
+        container.innerHTML = '<div class="empty" style="width:100%;">暂无数据</div>';
+        return;
+    }
+    const maxVal = Math.max(...trend.map(d => d.total), 1);
+    let html = '';
+    trend.forEach(d => {
+        const dayLabel = d.day.substring(5); // MM-DD
+        const heightPct = (d.total / maxVal * 100).toFixed(1);
+        const totalW = Math.max(28, (d.total / maxVal * 100));
+        const blockedW = d.total ? (d.blocked / d.total * totalW) : 0;
+        const desensitizedW = d.total ? (d.desensitized / d.total * totalW) : 0;
+        const passedW = totalW - blockedW - desensitizedW;
+        html += `<div style="flex:1; display:flex; flex-direction:column; align-items:center; min-width:40px;">
+            <div style="font-size:10px; color:#64748b; margin-bottom:2px;">${d.total}</div>
+            <div style="width:100%; height:${heightPct}%; display:flex; flex-direction:column; justify-content:flex-end; border-radius: 4px 4px 0 0; overflow:hidden; position:relative;">
+                <div style="width:100%; height:${passedW}%; background:#4f6ef7; min-height:0;" title="通过: ${d.passed}"></div>
+                <div style="width:100%; height:${desensitizedW}%; background:#f59e0b; min-height:0;" title="脱敏: ${d.desensitized}"></div>
+                <div style="width:100%; height:${blockedW}%; background:#ef4444; min-height:0;" title="阻断: ${d.blocked}"></div>
+            </div>
+            <div style="font-size:10px; color:#94a3b8; margin-top:4px;">${dayLabel}</div>
+        </div>`;
+    });
+    container.innerHTML = html;
+}
+
+function renderTopBlocked(items) {
+    const container = document.getElementById('topBlocked');
+    if (!items.length) {
+        container.innerHTML = '<div class="empty" style="padding:20px;">暂无阻断记录</div>';
+        return;
+    }
+    const maxCnt = items[0].cnt || 1;
+    let html = '';
+    const colors = ['#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16'];
+    items.forEach((item, i) => {
+        const pct = (item.cnt / maxCnt * 100).toFixed(0);
+        html += `<div style="margin-bottom: 14px;">
+            <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px;">
+                <span style="font-weight: 500;">${escapeHtml(item.name)}</span>
+                <span style="color: var(--text-muted);">${item.cnt} 次</span>
+            </div>
+            <div style="height: 8px; background: #f1f5f9; border-radius: 4px; overflow: hidden;">
+                <div style="height: 100%; width: ${pct}%; background: ${colors[i]}; border-radius: 4px; transition: width 0.6s ease;"></div>
+            </div>
+        </div>`;
+    });
+    container.innerHTML = html;
+}
+
+function renderTenantTable(tenants) {
+    const tbody = document.getElementById('tenantTableBody');
+    if (!tenants.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty">暂无租户数据</td></tr>';
+        return;
+    }
+    let html = '';
+    tenants.forEach(t => {
+        const total = (t.request_count || 0);
+        const blocked = (t.blocked_count || 0);
+        const rate = total > 0 ? (blocked / total * 100).toFixed(1) : '0.0';
+        const statusTag = t.status === 'active'
+            ? '<span class="status-indicator"><span class="status-dot on"></span>活跃</span>'
+            : '<span class="status-indicator"><span class="status-dot off"></span>已禁用</span>';
+        const rateColor = parseFloat(rate) > 10 ? 'var(--danger)' : (parseFloat(rate) > 3 ? 'var(--warning)' : 'var(--success)');
+        html += `<tr>
+            <td><strong>${escapeHtml(t.name)}</strong></td>
+            <td>${statusTag}</td>
+            <td><span class="tag tag-info">${t.user_count || 0}</span></td>
+            <td>${total}</td>
+            <td><span class="tag tag-danger">${blocked}</span></td>
+            <td><span class="tag tag-warning">${t.desensitized_count || 0}</span></td>
+            <td><span style="color:${rateColor};font-weight:600;">${rate}%</span></td>
+        </tr>`;
+    });
+    tbody.innerHTML = html;
+}
+
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+// 页面加载时自动获取数据
+refreshData();
+</script>
+{% endblock %}

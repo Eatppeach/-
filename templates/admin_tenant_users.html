@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+{% block title %}用户管理 - 大模型数据防护能力平台{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h2>👥 用户管理</h2>
+        <p class="text-muted" style="margin-top: 4px;">管理「{{ tenant.name }}」下的用户账号</p>
+    </div>
+    <div style="display: flex; gap: 10px;">
+        <button class="btn btn-outline" onclick="openEditTenantModal()">✏️ 租户信息</button>
+        <button class="btn btn-primary" onclick="openCreateUserModal()">+ 创建用户</button>
+    </div>
+</div>
+
+<!-- 租户信息卡片 -->
+<div class="stats-row" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+    <div class="stat-card blue">
+        <div class="stat-icon blue">🏢</div>
+        <div class="stat-info"><div class="num">{{ tenant.name }}</div><div class="label">租户名称</div></div>
+    </div>
+    <div class="stat-card purple">
+        <div class="stat-icon purple">👥</div>
+        <div class="stat-info"><div class="num">{{ users|length }} / {{ tenant.max_users }}</div><div class="label">用户数 / 上限</div></div>
+    </div>
+    <div class="stat-card green">
+        <div class="stat-icon green">📧</div>
+        <div class="stat-info"><div class="num" style="font-size: 14px;">{{ tenant.contact or '未设置' }}</div><div class="label">联系人</div></div>
+    </div>
+    <div class="stat-card orange">
+        <div class="stat-icon orange">📝</div>
+        <div class="stat-info"><div class="num" style="font-size: 14px;">{{ tenant.description or '无' }}</div><div class="label">描述</div></div>
+    </div>
+</div>
+
+<!-- 用户列表 -->
+<div class="card">
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>用户名</th>
+                    <th>角色</th>
+                    <th>创建时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr>
+                    <td><span class="code">{{ u.id }}</span></td>
+                    <td><strong>{{ u.username }}</strong></td>
+                    <td>
+                        {% if u.role == 'admin' %}
+                        <span class="tag tag-warning">🔧 租户管理员</span>
+                        {% else %}
+                        <span class="tag tag-info">👤 普通用户</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-muted">{{ u.created_at[:10] if u.created_at else '-' }}</td>
+                    <td>
+                        <button class="btn btn-outline btn-xs" onclick="openEditUserModal({{ u.id }}, '{{ u.username|e }}', '{{ u.role }}')" title="编辑">✏️</button>
+                        {% if u.username != session.username %}
+                        <button class="btn btn-danger btn-xs" onclick="confirmDeleteUser({{ u.id }}, '{{ u.username|e }}')" title="删除">🗑</button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if not users %}
+                <tr><td colspan="5" class="empty"><div class="empty-icon">👤</div>暂无用户，点击上方按钮创建</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ==================== 编辑租户信息弹窗 ==================== -->
+<div class="modal-overlay" id="editTenantModal">
+    <div class="modal">
+        <h3>编辑租户信息</h3>
+        <div class="form-group">
+            <label>租户名称</label>
+            <input type="text" id="editTenantName" maxlength="50" value="{{ tenant.name }}">
+        </div>
+        <div class="form-group">
+            <label>描述</label>
+            <textarea id="editTenantDesc" rows="2">{{ tenant.description or '' }}</textarea>
+        </div>
+        <div class="form-group">
+            <label>联系人</label>
+            <input type="text" id="editTenantContact" maxlength="100" value="{{ tenant.contact or '' }}">
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-outline" onclick="closeModal('editTenantModal')">取消</button>
+            <button class="btn btn-primary" onclick="doUpdateTenant()">保存</button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== 创建用户弹窗 ==================== -->
+<div class="modal-overlay" id="createUserModal">
+    <div class="modal">
+        <h3>创建用户</h3>
+        <div class="form-row">
+            <div class="form-group">
+                <label>用户名 <span class="text-danger">*</span></label>
+                <input type="text" id="createUsername" placeholder="用户名" maxlength="30">
+            </div>
+            <div class="form-group">
+                <label>密码 <span class="text-danger">*</span></label>
+                <input type="password" id="createPassword" placeholder="密码（至少6位）" minlength="6">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>角色</label>
+            <select id="createRole">
+                <option value="user">普通用户</option>
+            </select>
+            <span class="help-text">租户管理员只能创建普通用户</span>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-outline" onclick="closeModal('createUserModal')">取消</button>
+            <button class="btn btn-primary" onclick="doCreateUser()">确认创建</button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== 编辑用户弹窗 ==================== -->
+<div class="modal-overlay" id="editUserModal">
+    <div class="modal">
+        <h3>编辑用户</h3>
+        <input type="hidden" id="editUserId">
+        <div class="form-group">
+            <label>用户名</label>
+            <input type="text" id="editUsername" maxlength="30">
+        </div>
+        <div class="form-group">
+            <label>新密码（留空则不修改）</label>
+            <input type="password" id="editPassword" placeholder="留空则不修改" minlength="6">
+        </div>
+        <div class="form-group">
+            <label>角色</label>
+            <select id="editRole">
+                <option value="user">普通用户</option>
+            </select>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-outline" onclick="closeModal('editUserModal')">取消</button>
+            <button class="btn btn-primary" onclick="doUpdateUser()">保存</button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== 删除确认弹窗 ==================== -->
+<div class="modal-overlay" id="deleteUserModal">
+    <div class="modal">
+        <h3>确认删除</h3>
+        <input type="hidden" id="deleteUserId">
+        <p style="color: var(--text-secondary); font-size: 14px;">
+            确定要删除用户 <strong id="deleteUserName" style="color: var(--danger);"></strong> 吗？
+        </p>
+        <p style="color: var(--text-muted); font-size: 13px; margin-top: 8px;">
+            此操作不可恢复，该用户将无法登录系统。
+        </p>
+        <div class="modal-actions">
+            <button class="btn btn-outline" onclick="closeModal('deleteUserModal')">取消</button>
+            <button class="btn btn-danger" onclick="doDeleteUser()">确认删除</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ==================== 租户信息编辑 ====================
+function openEditTenantModal() {
+    openModal('editTenantModal');
+}
+
+async function doUpdateTenant() {
+    const data = {
+        name: document.getElementById('editTenantName').value.trim(),
+        description: document.getElementById('editTenantDesc').value.trim(),
+        contact: document.getElementById('editTenantContact').value.trim()
+    };
+    const resp = await fetch('/api/tenant/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+    if (resp.ok) {
+        showToast('租户信息已更新', 'success');
+        closeModal('editTenantModal');
+        location.reload();
+    } else {
+        const err = await resp.json();
+        showToast(err.error || '更新失败', 'error');
+    }
+}
+
+// ==================== 用户创建 ====================
+function openCreateUserModal() {
+    document.getElementById('createUsername').value = '';
+    document.getElementById('createPassword').value = '';
+    document.getElementById('createRole').value = 'user';
+    openModal('createUserModal');
+}
+
+async function doCreateUser() {
+    const username = document.getElementById('createUsername').value.trim();
+    const password = document.getElementById('createPassword').value;
+    const role = document.getElementById('createRole').value;
+
+    if (!username) { showToast('请输入用户名', 'warning'); return; }
+    if (!password || password.length < 6) { showToast('密码至少6位', 'warning'); return; }
+
+    const resp = await fetch('/api/tenant/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, role })
+    });
+    if (resp.ok) {
+        showToast('用户创建成功', 'success');
+        closeModal('createUserModal');
+        location.reload();
+    } else {
+        const err = await resp.json();
+        showToast(err.error || '创建失败', 'error');
+    }
+}
+
+// ==================== 用户编辑 ====================
+function openEditUserModal(id, username, role) {
+    document.getElementById('editUserId').value = id;
+    document.getElementById('editUsername').value = username;
+    document.getElementById('editPassword').value = '';
+    document.getElementById('editRole').value = role;
+    openModal('editUserModal');
+}
+
+async function doUpdateUser() {
+    const id = document.getElementById('editUserId').value;
+    const data = {
+        username: document.getElementById('editUsername').value.trim()
+    };
+    const password = document.getElementById('editPassword').value;
+    if (password) {
+        data.password = password;
+    }
+    data.role = document.getElementById('editRole').value;
+
+    const resp = await fetch('/api/tenant/users/' + id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+    if (resp.ok) {
+        showToast('用户信息已更新', 'success');
+        closeModal('editUserModal');
+        location.reload();
+    } else {
+        const err = await resp.json();
+        showToast(err.error || '更新失败', 'error');
+    }
+}
+
+// ==================== 用户删除 ====================
+function confirmDeleteUser(id, username) {
+    document.getElementById('deleteUserId').value = id;
+    document.getElementById('deleteUserName').textContent = username;
+    openModal('deleteUserModal');
+}
+
+async function doDeleteUser() {
+    const id = document.getElementById('deleteUserId').value;
+    const resp = await fetch('/api/tenant/users/' + id, { method: 'DELETE' });
+    if (resp.ok) {
+        showToast('用户已删除', 'success');
+        closeModal('deleteUserModal');
+        location.reload();
+    } else {
+        showToast('删除失败', 'error');
+    }
+}
+</script>
+{% endblock %}

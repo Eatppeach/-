@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}审计日志 - 大模型数据防护能力平台{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="flex-between" style="margin-bottom: 16px;">
+        <div>
+            <h2>📋 审计日志</h2>
+            <p class="text-muted" style="margin-top: 4px;">
+                记录所有经过安全网关的请求详情，日志保留 180 天
+                {% if session.role != 'admin' %}<span class="tag tag-warning" style="margin-left: 4px;">仅显示您的记录</span>{% endif %}
+            </p>
+        </div>
+        {% if session.role == 'admin' %}
+        <button class="btn btn-danger btn-sm" onclick="cleanup()">清理过期日志</button>
+        {% endif %}
+    </div>
+
+    <!-- 筛选表单 -->
+    <form style="display: flex; gap: 16px; margin-bottom: 16px; padding: 16px; background: #f8fafc; border-radius: 10px; flex-wrap: wrap; align-items: flex-end; border: 1px solid var(--border);" onsubmit="event.preventDefault(); filterLogs();">
+        <div class="form-group" style="margin-bottom: 0;"><label>用户</label><input name="user_id" value="{{ user_id }}" placeholder="输入用户ID" style="width:140px;"></div>
+        <div class="form-group" style="margin-bottom: 0;"><label>处理动作</label><select name="action" style="width:140px;"><option value="">全部</option><option value="blocked" {% if action=='blocked' %}selected{% endif %}>🚫 已阻断</option><option value="desensitized" {% if action=='desensitized' %}selected{% endif %}>🔐 已脱敏</option><option value="passed" {% if action=='passed' %}selected{% endif %}>✅ 已放行</option></select></div>
+        <div class="form-group" style="margin-bottom: 0;"><label>开始日期</label><input type="date" name="date_from" value="{{ date_from }}" style="width:140px;"></div>
+        <div class="form-group" style="margin-bottom: 0;"><label>结束日期</label><input type="date" name="date_to" value="{{ date_to }}" style="width:140px;"></div>
+        <div class="form-group" style="margin-bottom: 0;">
+            <button type="submit" class="btn btn-primary btn-sm">🔍 筛选</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="location.href='/audit'" style="margin-left: 6px;">重置</button>
+        </div>
+    </form>
+
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>ID</th><th>时间</th><th>用户</th><th>IP</th><th>原始输入</th><th>脱敏后</th><th>触发规则</th><th>处理动作</th><th>耗时(ms)</th></tr></thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td><span class="code">{{ log.id }}</span></td>
+                    <td style="font-size:12px; white-space:nowrap;">{{ log.request_time }}</td>
+                    <td>{{ log.user_id or '—' }}</td>
+                    <td style="font-size:12px;"><code class="code">{{ log.client_ip or '—' }}</code></td>
+                    <td class="ellipsis" style="max-width:140px;" title="{{ log.original_input }}">{{ log.original_input }}</td>
+                    <td class="ellipsis" style="max-width:140px;" title="{{ log.desensitized_input }}">{{ log.desensitized_input or '—' }}</td>
+                    <td style="font-size:11px; max-width:100px; overflow:hidden; text-overflow:ellipsis;" title="{{ log.triggered_rules }}">{{ log.triggered_rules or '—' }}</td>
+                    <td>
+                        {% if log.action_taken == 'blocked' %}
+                        <span class="tag tag-high">🚫 已阻断</span>
+                        {% elif log.action_taken == 'desensitized' %}
+                        <span class="tag tag-medium">🔐 已脱敏</span>
+                        {% else %}
+                        <span class="tag tag-low">✅ 已放行</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ "%.1f"|format(log.processing_time_ms or 0) }}</td>
+                </tr>
+                {% endfor %}
+                {% if not logs %}
+                <tr><td colspan="9" class="empty"><div class="empty-icon">📭</div>暂无日志记录</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if total_pages > 1 %}
+    <div class="pagination">
+        {% for p in range(1, total_pages + 1) %}
+        <a href="?page={{ p }}&user_id={{ user_id }}&action={{ action }}&date_from={{ date_from }}&date_to={{ date_to }}" class="{% if p == page %}active{% endif %}">{{ p }}</a>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <p style="text-align:center; margin-top: 10px; font-size: 13px; color: var(--text-muted);">共 <strong>{{ total }}</strong> 条记录{% if total_pages > 1 %}，第 <strong>{{ page }}/{{ total_pages }}</strong> 页{% endif %}</p>
+</div>
+
+<script>
+function filterLogs() {
+    const params = new URLSearchParams(new FormData(document.querySelector('form')));
+    location.href = '/audit?' + params.toString();
+}
+async function cleanup() {
+    if (!confirm('确认清理超过 180 天的过期日志？此操作不可恢复。')) return;
+    await fetch('/api/audit/cleanup', { method: 'POST' });
+    showToast('过期日志已清理', 'success');
+    location.reload();
+}
+</script>
+{% endblock %}

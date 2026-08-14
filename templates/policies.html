@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}脱敏策略 - 大模型数据防护能力平台{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="margin-bottom: 16px;">
+        <h2>🔐 脱敏策略配置</h2>
+        <p class="text-muted" style="margin-top: 4px;">定义检测到敏感信息后的脱敏处理方式，支持掩码、替换、加密、哈希、泛化等算法</p>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr><th>ID</th><th>策略名称</th><th>关联规则</th><th>脱敏算法</th><th>掩码配置</th><th>状态</th><th>操作</th></tr>
+            </thead>
+            <tbody>
+                {% for p in policies %}
+                <tr>
+                    <td><span class="code">{{ p.id }}</span></td>
+                    <td><strong>{{ p.name }}</strong></td>
+                    <td><span class="tag tag-info">{{ p.rule_name or '—' }}</span></td>
+                    <td>
+                        <select onchange="updateMethod({{ p.id }}, this.value)" class="btn-sm" style="border: 1px solid #d0d0d0; border-radius: 4px; padding: 4px 8px;">
+                            <option value="mask" {% if p.method == 'mask' %}selected{% endif %}>掩码 (mask)</option>
+                            <option value="replace" {% if p.method == 'replace' %}selected{% endif %}>替换 (replace)</option>
+                            <option value="encrypt" {% if p.method == 'encrypt' %}selected{% endif %}>加密 (encrypt)</option>
+                            <option value="hash" {% if p.method == 'hash' %}selected{% endif %}>哈希 (hash)</option>
+                            <option value="generalize" {% if p.method == 'generalize' %}selected{% endif %}>泛化 (generalize)</option>
+                        </select>
+                    </td>
+                    <td><code class="code" style="max-width:200px; display:inline-block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ p.mask_config }}">{{ p.mask_config }}</code></td>
+                    <td>
+                        <span class="status-indicator">
+                            <span class="status-dot {{ 'on' if p.enabled else 'off' }}"></span>
+                            {{ '启用' if p.enabled else '禁用' }}
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn btn-outline btn-xs" onclick="togglePolicy({{ p.id }}, {{ p.enabled }})">
+                            {{ '禁用' if p.enabled else '启用' }}
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if not policies %}
+                <tr><td colspan="7" class="empty"><div class="empty-icon">📭</div>暂无脱敏策略，请先添加识别规则</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card" style="background: #fafbfc;">
+    <h2>📖 算法说明</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; font-size: 13px; color: #555;">
+        <div><strong>掩码 (mask)</strong><br><span class="text-muted">保留首尾若干字符，中间用 * 替换</span><br><span class="code">138****5678</span></div>
+        <div><strong>替换 (replace)</strong><br><span class="text-muted">用固定字符替换整个敏感信息</span><br><span class="code">[手机号已隐藏]</span></div>
+        <div><strong>加密 (encrypt)</strong><br><span class="text-muted">使用 AES 加密，可解密恢复</span><br><span class="code">iv2xP9...WQ==</span></div>
+        <div><strong>哈希 (hash)</strong><br><span class="text-muted">SHA256 单向哈希，不可恢复</span><br><span class="code">a1b2c3...d4e5</span></div>
+        <div><strong>泛化 (generalize)</strong><br><span class="text-muted">降低精度，如精确坐标改为城市</span><br><span class="code">北京市</span></div>
+    </div>
+</div>
+
+<script>
+async function updateMethod(id, method) {
+    await fetch(`/api/policies/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({method}) });
+    showToast('脱敏算法已更新', 'success');
+}
+async function togglePolicy(id, enabled) {
+    await fetch(`/api/policies/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({enabled: enabled ? 0 : 1}) });
+    showToast(enabled ? '策略已禁用' : '策略已启用', 'info');
+    location.reload();
+}
+</script>
+{% endblock %}

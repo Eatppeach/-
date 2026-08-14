@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大模型数据防护能力平台 — 系统架构图</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: "Inter", "Microsoft YaHei", "PingFang SC", sans-serif; background: linear-gradient(135deg, #edf4fc 0%, #f8fbff 55%, #e8f8fb 100%); color: #14233b; padding: 34px 28px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 { text-align: center; margin-bottom: 8px; font-size: 26px; color: #1769e8; }
+        .subtitle { text-align: center; color: #8190a5; margin-bottom: 32px; font-size: 13px; }
+        .diagram-box { background: rgba(255,255,255,.94); border: 1px solid #e1ebf6; border-radius: 22px; box-shadow: 0 12px 32px rgba(79,121,166,.09); padding: 28px; margin-bottom: 22px; }
+        .diagram-box h2 { font-size: 18px; margin-bottom: 18px; color: #14233b; border-left: 4px solid #1769e8; padding-left: 12px; }
+        .diagram-box h3 { font-size: 15px; margin: 20px 0 12px; color: #536781; }
+        .mermaid { display: flex; justify-content: center; overflow-x: auto; }
+        .legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 16px; padding: 12px; background: #f3f7fd; border: 1px solid #e1e9f3; border-radius: 12px; font-size: 13px; }
+        .legend-item { display: flex; align-items: center; gap: 6px; }
+        .legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>大模型数据防护能力平台 — 系统架构</h1>
+    <p class="subtitle">包含分层架构、模块依赖、核心函数调用关系</p>
+
+    <!-- ==================== 图1：系统分层架构 ==================== -->
+    <div class="diagram-box">
+        <h2>一、系统分层架构图</h2>
+        <div class="mermaid">
+graph TB
+    subgraph External["🌐 外部系统"]
+        LLM["上游 LLM API<br/>(OpenAI / DeepSeek / Qwen)"]
+        Browser["用户浏览器"]
+    end
+
+    subgraph Presentation["📺 展示层 — templates/"]
+        CHAT["chat.html<br/>实时对话页面"]
+        DEMO["demo.html<br/>在线演示"]
+        INDEX["index.html<br/>仪表盘"]
+        RULES_P["rules.html<br/>规则管理"]
+        POLICIES_P["policies.html<br/>脱敏策略"]
+        BLOCK_P["block.html<br/>阻断策略"]
+        AUDIT_P["audit.html<br/>审计日志"]
+        WL_P["whitelist.html<br/>白名单"]
+    end
+
+    subgraph App["⚙️ 应用层 — app.py (Flask)"]
+        direction TB
+        MGMT["管理页面路由<br/>/ /rules /policies /block /audit ..."]
+        SCAN["/api/gateway/scan<br/>敏感信息扫描"]
+        PROTECT["/api/gateway/protect<br/>安全检测+脱敏"]
+        CHAT_API["/api/gateway/chat<br/>对话代理 (SSE流式)"]
+        CRUD["CRUD API<br/>规则/策略/白名单/阻断"]
+    end
+
+    subgraph Gateway["🛡️ 网关层 — proxy_gateway.py"]
+        GW["SecurityGateway 单例<br/>gateway"]
+        PR["process_request()<br/>请求安全处理"]
+        PO["process_output()<br/>输出安全扫描"]
+        STREAM["stream_llm_response()<br/>SSE流式转发"]
+        FWD["forward_to_llm()<br/>非流式转发"]
+        CB["_check_block()<br/>阻断策略检查"]
+        EC["_evaluate_condition()<br/>条件评估"]
+    end
+
+    subgraph Engine["🔍 引擎层"]
+        RE["RecognitionEngine<br/>recognition_engine<br/>.scan() 敏感数据识别<br/>.scan_file() 文件扫描<br/>._is_whitelisted() 白名单"]
+        DE["DesensitizationEngine<br/>desensitization_engine<br/>.desensitize() 数据脱敏<br/>._mask() 掩码<br/>._encrypt() 加密<br/>._hash() 哈希<br/>._generalize() 泛化"]
+    end
+
+    subgraph Data["💾 数据层 — database.py + SQLite"]
+        DB[("data_protection.db<br/>SQLite")]
+        RULES_DB["recognition_rules<br/>识别规则表"]
+        POLICIES_DB["desensitization_policies<br/>脱敏策略表"]
+        BLOCK_DB["block_policies<br/>阻断策略表"]
+        WL_DB["whitelist<br/>白名单表"]
+        AUDIT_DB["audit_logs<br/>审计日志表"]
+        CONFIG_M["config.py<br/>系统配置"]
+    end
+
+    Browser -->|HTTP| MGMT
+    Browser -->|HTTP POST| CHAT_API
+    CHAT_API -->|调用| PR
+    CHAT_API -->|流式调用| STREAM
+    CHAT_API -->|非流式调用| FWD
+    PR -->|识别| RE
+    PR -->|脱敏| DE
+    PR -->|阻断检查| CB
+    PR -->|写日志| AUDIT_DB
+    CB --> EC
+    STREAM -->|转发| LLM
+    STREAM -->|输出扫描| PO
+    PO -->|识别| RE
+    PO -->|脱敏| DE
+    FWD -->|转发| LLM
+    RE -->|读取规则| RULES_DB
+    RE -->|检查白名单| WL_DB
+    DE -->|读取策略| POLICIES_DB
+    CB -->|读取策略| BLOCK_DB
+    CRUD --> DB
+    GW -.->|refresh()| RE
+    GW -.->|refresh()| DE
+    CONFIG_M -.-> DB
+
+    style External fill:#e3f2fd,stroke:#1565c0
+    style Presentation fill:#f3e5f5,stroke:#7b1fa2
+    style App fill:#e8f5e9,stroke:#2e7d32
+    style Gateway fill:#fff3e0,stroke:#e65100
+    style Engine fill:#ffebee,stroke:#c62828
+    style Data fill:#f5f5f5,stroke:#616161
+    style GW fill:#ff9800,stroke:#e65100,color:#fff
+    style RE fill:#f44336,stroke:#c62828,color:#fff
+    style DE fill:#f44336,stroke:#c62828,color:#fff
+        </div>
+        <div class="legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#e3f2fd;border:2px solid #1565c0"></div> 外部系统</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#f3e5f5;border:2px solid #7b1fa2"></div> 展示层</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#e8f5e9;border:2px solid #2e7d32"></div> 应用层</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#fff3e0;border:2px solid #e65100"></div> 网关层</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#ffebee;border:2px solid #c62828"></div> 引擎层</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#f5f5f5;border:2px solid #616161"></div> 数据层</div>
+            <div class="legend-item"><span style="border-bottom:2px dashed #999">- - - →</span> 间接调用/配置</div>
+        </div>
+    </div>
+
+    <!-- ==================== 图2：核心函数调用关系（实时对话流程） ==================== -->
+    <div class="diagram-box">
+        <h2>二、核心函数调用关系图 — 实时对话流程</h2>
+        <p style="font-size:13px;color:#888;margin-bottom:16px;">展示从用户输入到 LLM 流式输出全链路的函数调用关系</p>
+        <div class="mermaid">
+sequenceDiagram
+    participant UI as chat.html<br/>sendMessage()
+    participant API as app.py<br/>api_chat_proxy()
+    participant GW as proxy_gateway.py<br/>SecurityGateway
+    participant RE as recognition_engine.py<br/>RecognitionEngine
+    participant DE as desensitization_engine.py<br/>DesensitizationEngine
+    participant DB as database.py<br/>audit_logs
+    participant LLM as 上游 LLM API
+
+    Note over UI,LLM: ═══ 阶段一：请求安全预处理 ═══
+
+    UI->>API: POST /api/gateway/chat<br/>{message, history, stream:true}
+    API->>GW: process_request(user_input, ...)
+
+    GW->>RE: scan(text, client_ip, user_id)
+    RE->>RE: _is_whitelisted(text, ip, uid)
+    alt 命中白名单
+        RE-->>GW: {whitelisted:true}
+        GW-->>API: {action:"passed"}
+    else 未命中白名单
+        RE->>RE: 遍历 _compiled_rules<br/>正则匹配 + 关键词匹配
+        RE-->>GW: {matches[], match_count, highest_level}
+    end
+
+    GW->>GW: _check_block(scan_result)
+    GW->>GW: _evaluate_condition(condition, scan_result)
+    alt 硬阻断 (hard)
+        GW->>DB: add_audit_log(action="blocked")
+        GW-->>API: {action:"blocked", block_level:"hard"}
+        API-->>UI: 403 + 阻断信息
+    else 软阻断 (soft) 或 静默 (silent)
+        GW->>DE: desensitize(text, matches)
+        DE->>DE: _find_policy(rule_name)
+        DE->>DE: _apply_desensitization(text, method, config)
+        alt method=mask
+            DE->>DE: _mask(text, {keep_prefix, keep_suffix})
+        else method=encrypt
+            DE->>DE: _encrypt(text, config)
+        else method=hash
+            DE->>DE: _hash(text, config)
+        else method=generalize
+            DE->>DE: _generalize(text, config)
+        end
+        DE-->>GW: 脱敏后文本
+        GW->>DB: add_audit_log(action="desensitized")
+        GW-->>API: {action:"desensitized", processed_input}
+    else 无敏感信息
+        GW->>DB: add_audit_log(action="passed")
+        GW-->>API: {action:"passed", processed_input}
+    end
+
+    Note over UI,LLM: ═══ 阶段二：SSE 流式转发 ═══
+
+    API->>GW: stream_llm_response(processed_input, upstream_url, ...)
+    GW->>LLM: POST with stream=True<br/>{model, messages, stream:true}
+
+    loop 逐行读取 SSE
+        LLM-->>GW: data: {"choices":[{"delta":{"content":"xxx"}}]}
+        GW-->>API: yield "data: {...}\n" (透传)
+        API-->>UI: SSE chunk
+        UI->>UI: 解析 delta.content<br/>更新 DOM 显示
+        GW->>GW: 累积 accumulated += content
+    end
+
+    Note over UI,LLM: ═══ 阶段三：输出安全扫描 ═══
+
+    LLM-->>GW: data: [DONE]
+    GW->>GW: process_output(accumulated)
+    GW->>RE: scan(accumulated)
+    RE-->>GW: scan_result
+    alt 模型输出含敏感信息
+        GW->>DE: desensitize(accumulated, matches)
+        DE-->>GW: 脱敏后输出
+        GW-->>API: yield warning
+        API-->>UI: "⚠ 模型输出中检测到敏感信息"
+    end
+    GW-->>API: yield "data: [DONE]\n"
+    API-->>UI: 流结束
+        </div>
+    </div>
+
+    <!-- ==================== 图3：模块依赖关系图 ==================== -->
+    <div class="diagram-box">
+        <h2>三、模块依赖关系图</h2>
+        <p style="font-size:13px;color:#888;margin-bottom:16px;">箭头方向 = 依赖方向（A → B 表示 A 依赖 B）</p>
+        <div class="mermaid">
+graph LR
+    subgraph Core["核心模块"]
+        APP["app.py<br/>Flask 主应用"] --> GW2["proxy_gateway.py<br/>安全网关"]
+        APP --> DB2["database.py<br/>数据操作"]
+        GW2 --> RE2["recognition_engine.py<br/>识别引擎"]
+        GW2 --> DE2["desensitization_engine.py<br/>脱敏引擎"]
+        GW2 --> DB2
+        RE2 --> DB2
+        DE2 --> DB2
+        DE2 --> CFG["config.py"]
+    end
+
+    subgraph Templates["前端模板"]
+        CHAT2["chat.html"] --> APP
+        DEMO2["demo.html"] --> APP
+        BASE["base.html"] --> APP
+    end
+
+    subgraph External2["外部依赖"]
+        LLM2["上游 LLM API"] -.-> GW2
+        SQLITE["SQLite"] -.-> DB2
+    end
+
+    style APP fill:#43a047,color:#fff
+    style GW2 fill:#ff9800,color:#fff
+    style RE2 fill:#f44336,color:#fff
+    style DE2 fill:#f44336,color:#fff
+    style DB2 fill:#2196f3,color:#fff
+    style CFG fill:#9e9e9e,color:#fff
+        </div>
+    </div>
+
+    <!-- ==================== 图4：SecurityGateway 类内部调用关系 ==================== -->
+    <div class="diagram-box">
+        <h2>四、SecurityGateway 类内部调用关系</h2>
+        <p style="font-size:13px;color:#888;margin-bottom:16px;">核心网关类的完整方法调用链</p>
+        <div class="mermaid">
+graph TB
+    Entry["外部调用入口"] --> PR2["process_request()<br/>请求安全处理"]
+    Entry --> PO2["process_output()<br/>输出安全扫描"]
+    Entry --> STREAM2["stream_llm_response()<br/>SSE流式转发"]
+    Entry --> FWD2["forward_to_llm()<br/>非流式转发"]
+
+    PR2 --> RE3["recognition_engine.scan()"]
+    PR2 --> CB2["_check_block()"]
+    PR2 --> DE3["desensitization_engine.desensitize()"]
+    PR2 --> DB3["add_audit_log()"]
+
+    CB2 --> EC2["_evaluate_condition()"]
+    CB2 --> DB3
+
+    PO2 --> RE3
+    PO2 --> DE3
+
+    STREAM2 --> PO2
+    STREAM2 --> |"requests.post(stream=True)"| LLM3["上游 LLM API"]
+    STREAM2 --> DB3
+
+    FWD2 --> |"requests.post(stream=False)"| LLM3
+
+    GW_META["refresh()<br/>热刷新"] --> RE3
+    GW_META --> DE3
+    GW_META --> DB3
+
+    style PR2 fill:#ff9800,color:#fff
+    style PO2 fill:#ff9800,color:#fff
+    style STREAM2 fill:#ff9800,color:#fff
+    style FWD2 fill:#ff9800,color:#fff
+    style CB2 fill:#ff9800,color:#fff
+    style EC2 fill:#ff9800,color:#fff
+    style RE3 fill:#f44336,color:#fff
+    style DE3 fill:#f44336,color:#fff
+    style DB3 fill:#2196f3,color:#fff
+        </div>
+    </div>
+
+    <!-- ==================== 图5：数据表 ER 关系 ==================== -->
+    <div class="diagram-box">
+        <h2>五、数据库 ER 关系图</h2>
+        <div class="mermaid">
+erDiagram
+    recognition_rules ||--o{ desensitization_policies : "rule_id → FK"
+    recognition_rules {
+        int id PK
+        string name UK
+        string rule_type "regex|keyword"
+        string pattern
+        string sensitivity_level "high|medium|low"
+        string category "personal|business|network|credential"
+        int enabled
+    }
+    desensitization_policies {
+        int id PK
+        string name UK
+        int rule_id FK
+        string method "mask|encrypt|hash|generalize"
+        string mask_config "JSON"
+        int enabled
+    }
+    block_policies {
+        int id PK
+        string name UK
+        string trigger_condition
+        string block_level "hard|soft|silent"
+        string block_message
+        int enabled
+    }
+    whitelist {
+        int id PK
+        string whitelist_type "ip|user|text"
+        string whitelist_value
+        string description
+        int enabled
+    }
+    audit_logs {
+        int id PK
+        timestamp request_time
+        string user_id
+        string client_ip
+        text original_input
+        text desensitized_input
+        text model_output
+        string triggered_rules "JSON"
+        string action_taken "passed|desensitized|blocked"
+        string block_level
+        real processing_time_ms
+        string request_url
+    }
+        </div>
+    </div>
+
+</div>
+<script>
+    mermaid.initialize({
+        startOnLoad: true,
+        theme: 'default',
+        themeVariables: {
+            fontSize: '14px',
+            fontFamily: '"Microsoft YaHei", "PingFang SC", sans-serif'
+        },
+        flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
+        sequence: { useMaxWidth: true, mirrorActors: false, actorFontSize: '13px', noteFontSize: '12px' },
+        er: { useMaxWidth: true }
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}识别规则 - 大模型数据防护能力平台{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="flex-between" style="margin-bottom: 16px;">
+        <div>
+            <h2>🔍 敏感数据识别规则</h2>
+            <p class="text-muted" style="margin-top: 4px;">定义用于检测敏感信息的正则表达式或关键词规则，支持按敏感级别和分类管理</p>
+        </div>
+        <div class="flex-center">
+            <button class="btn btn-outline btn-sm" onclick="reloadRules()">🔄 刷新规则到内存</button>
+            <button class="btn btn-primary" onclick="openModal('addModal')">＋ 添加规则</button>
+        </div>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th><th>规则名称</th><th>类型</th><th>匹配模式</th><th>敏感级别</th><th>分类</th><th>状态</th><th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rule in rules %}
+                <tr>
+                    <td><span class="code">{{ rule.id }}</span></td>
+                    <td><strong>{{ rule.name }}</strong></td>
+                    <td><span class="tag tag-info">{{ '正则' if rule.rule_type == 'regex' else '关键词' }}</span></td>
+                    <td class="ellipsis" style="max-width:240px;" title="{{ rule.pattern }}"><code class="code">{{ rule.pattern }}</code></td>
+                    <td>
+                        {% if rule.sensitivity_level == 'high' %}
+                        <span class="tag tag-high">🔴 高</span>
+                        {% elif rule.sensitivity_level == 'medium' %}
+                        <span class="tag tag-medium">🟠 中</span>
+                        {% else %}
+                        <span class="tag tag-low">🟢 低</span>
+                        {% endif %}
+                    </td>
+                    <td><span class="tag tag-{{ rule.category }}">{{ rule.category }}</span></td>
+                    <td>
+                        <span class="status-indicator">
+                            <span class="status-dot {{ 'on' if rule.enabled else 'off' }}"></span>
+                            {{ '启用' if rule.enabled else '禁用' }}
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn btn-outline btn-xs" onclick="toggleRule({{ rule.id }}, {{ rule.enabled }})">
+                            {{ '禁用' if rule.enabled else '启用' }}
+                        </button>
+                        <button class="btn btn-danger btn-xs" onclick="deleteRule({{ rule.id }})">删除</button>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if not rules %}
+                <tr><td colspan="8" class="empty"><div class="empty-icon">📭</div>暂无规则，请点击"添加规则"创建</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 添加规则弹窗 -->
+<div id="addModal" class="modal-overlay">
+    <div class="modal">
+        <h3>＋ 添加识别规则</h3>
+        <form onsubmit="submitRule(event)">
+            <div class="form-row">
+                <div class="form-group"><label>规则名称 *</label><input name="name" required placeholder="如：身份证号"><div class="help-text">用于标识该规则的名称</div></div>
+                <div class="form-group"><label>规则类型</label><select name="rule_type"><option value="regex">正则表达式</option><option value="keyword">关键词</option></select><div class="help-text">正则表达式灵活度高，关键词匹配速度快</div></div>
+            </div>
+            <div class="form-group"><label>匹配模式 *</label><input name="pattern" required placeholder="如：1[3-9]\d{9}"><div class="help-text">正则表达式或关键词，用于匹配敏感内容</div></div>
+            <div class="form-group"><label>描述</label><input name="description" placeholder="该规则的用途说明"></div>
+            <div class="form-row">
+                <div class="form-group"><label>敏感级别</label><select name="sensitivity_level"><option value="high">高 — 直接阻断</option><option value="medium" selected>中 — 脱敏后放行</option><option value="low">低 — 仅记录</option></select></div>
+                <div class="form-group"><label>分类</label><select name="category"><option value="personal">个人隐私</option><option value="business">商业机密</option><option value="credential">凭证信息</option><option value="network">网络信息</option></select></div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn" onclick="closeModal('addModal')">取消</button>
+                <button type="submit" class="btn btn-primary">确认添加</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+async function submitRule(e) {
+    e.preventDefault();
+    const form = e.target;
+    const data = Object.fromEntries(new FormData(form));
+    const res = await fetch('/api/rules', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+    if (res.ok) { showToast('规则添加成功', 'success'); closeModal('addModal'); location.reload(); }
+    else { const err = await res.json(); showToast(err.error || '添加失败', 'error'); }
+}
+async function toggleRule(id, enabled) {
+    await fetch(`/api/rules/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({enabled: enabled ? 0 : 1}) });
+    showToast(enabled ? '规则已禁用' : '规则已启用', 'info');
+    location.reload();
+}
+async function deleteRule(id) {
+    if (!confirm('确认删除该规则？此操作不可恢复。')) return;
+    await fetch(`/api/rules/${id}`, { method: 'DELETE' });
+    showToast('规则已删除', 'success');
+    location.reload();
+}
+async function reloadRules() {
+    await fetch('/api/rules/reload', { method: 'POST' });
+    showToast('规则已刷新到内存', 'success');
+}
+</script>
+{% endblock %}
