@@ -1,11 +1,14 @@
 {% extends "base.html" %}
 {% block title %}阻断策略 - 大模型数据防护能力平台{% endblock %}
 {% block content %}
-<div class="card">
-    <div style="margin-bottom: 16px;">
-        <h2>🚫 阻断策略配置</h2>
-        <p class="text-muted" style="margin-top: 4px;">定义触发阻断的条件和级别，系统根据策略自动决定放行、告警或直接拒绝请求</p>
+<div class="page-heading">
+    <div class="page-heading-copy">
+        <h2 class="page-heading-title"><svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="/static/icons.svg#shield-alert"></use></svg>阻断策略配置</h2>
+        <p class="page-heading-subtitle">定义触发阻断的条件和级别，系统根据策略自动决定放行、告警或直接拒绝请求</p>
     </div>
+</div>
+
+<div class="card">
 
     <div class="table-wrap">
         <table>
@@ -18,9 +21,9 @@
                     <td><code class="code" style="max-width:260px; display:inline-block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ p.trigger_condition }}">{{ p.trigger_condition }}</code></td>
                     <td>
                         <select onchange="updateLevel({{ p.id }}, this.value)" style="border: 1.5px solid var(--border); border-radius: 6px; padding: 5px 10px; font-size: 12px; font-family: inherit; font-weight: 500; cursor: pointer; transition: all var(--transition);">
-                            <option value="hard" {% if p.block_level == 'hard' %}selected{% endif %}>🔴 硬阻断</option>
-                            <option value="soft" {% if p.block_level == 'soft' %}selected{% endif %}>🟠 软阻断</option>
-                            <option value="silent" {% if p.block_level == 'silent' %}selected{% endif %}>🟡 静默阻断</option>
+                            <option value="hard" {% if p.block_level == 'hard' %}selected{% endif %}>硬阻断</option>
+                            <option value="soft" {% if p.block_level == 'soft' %}selected{% endif %}>软阻断</option>
+                            <option value="silent" {% if p.block_level == 'silent' %}selected{% endif %}>静默阻断</option>
                         </select>
                     </td>
                     <td title="{{ p.block_message }}" class="ellipsis" style="max-width:180px;">{{ p.block_message }}</td>
@@ -38,28 +41,28 @@
                 </tr>
                 {% endfor %}
                 {% if not block_policies %}
-                <tr><td colspan="7" class="empty"><div class="empty-icon">📭</div>暂无阻断策略</td></tr>
+                <tr><td colspan="7" class="empty"><div class="empty-icon"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#inbox"></use></svg></div>暂无阻断策略</td></tr>
                 {% endif %}
             </tbody>
         </table>
     </div>
 </div>
 
-<div class="card" style="background: #f8fafc;">
-    <h2>📖 阻断级别说明</h2>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; font-size: 13px; color: var(--text-secondary);">
-        <div style="padding: 14px; background: #fff; border-radius: 10px; border: 1px solid var(--border); transition: all var(--transition);">
-            <div style="font-size: 28px; margin-bottom: 8px;">🔴</div>
+<div class="card">
+    <h2 class="section-title"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#book-open"></use></svg>阻断级别说明</h2>
+    <div class="info-grid">
+        <div class="info-item">
+            <div class="info-item-icon"><svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="/static/icons.svg#ban"></use></svg></div>
             <strong>硬阻断</strong><br>
             <span class="text-muted">直接拒绝请求，返回 403 错误。<br>适用场景：API密钥泄露、大量敏感数据外传</span>
         </div>
-        <div style="padding: 14px; background: #fff; border-radius: 10px; border: 1px solid var(--border); transition: all var(--transition);">
-            <div style="font-size: 28px; margin-bottom: 8px;">🟠</div>
+        <div class="info-item">
+            <div class="info-item-icon"><svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="/static/icons.svg#circle-alert"></use></svg></div>
             <strong>软阻断</strong><br>
             <span class="text-muted">告警并记录，但脱敏后仍放行请求。<br>适用场景：中等敏感信息，需人工关注</span>
         </div>
-        <div style="padding: 14px; background: #fff; border-radius: 10px; border: 1px solid var(--border); transition: all var(--transition);">
-            <div style="font-size: 28px; margin-bottom: 8px;">🟡</div>
+        <div class="info-item">
+            <div class="info-item-icon"><svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="/static/icons.svg#info"></use></svg></div>
             <strong>静默阻断</strong><br>
             <span class="text-muted">透明脱敏后放行，不通知用户。<br>适用场景：低风险敏感信息，用户无感知处理</span>
         </div>

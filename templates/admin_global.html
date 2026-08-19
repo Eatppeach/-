@@ -1,31 +1,31 @@
 {% extends "base.html" %}
 {% block title %}全局视图 - 大模型数据防护能力平台{% endblock %}
 {% block content %}
-<div class="page-header">
-    <div>
-        <h2>🌐 跨租户全局视图</h2>
-        <p class="text-muted" style="margin-top: 4px;">查看所有租户的安全防护数据汇总与趋势分析</p>
+<div class="page-heading">
+    <div class="page-heading-copy">
+        <h2 class="page-heading-title"><svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="/static/icons.svg#globe"></use></svg>跨租户全局视图</h2>
+        <p class="page-heading-subtitle">查看所有租户的安全防护数据汇总与趋势分析</p>
     </div>
-    <div style="display: flex; gap: 10px;">
-        <button class="btn btn-outline btn-sm" onclick="refreshData()">🔄 刷新数据</button>
+    <div class="page-actions">
+        <button class="btn btn-outline btn-sm" onclick="refreshData()"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#refresh-cw"></use></svg>刷新数据</button>
     </div>
 </div>
 
 <!-- 汇总统计卡片 -->
-<div class="stats-row" id="summaryCards" style="grid-template-columns: repeat(6, 1fr);">
-    <div class="stat-card blue"><div class="stat-icon blue">🏢</div><div class="stat-info"><div class="num">-</div><div class="label">租户总数</div></div></div>
-    <div class="stat-card green"><div class="stat-icon green">✅</div><div class="stat-info"><div class="num">-</div><div class="label">活跃租户</div></div></div>
-    <div class="stat-card purple"><div class="stat-icon purple">👥</div><div class="stat-info"><div class="num">-</div><div class="label">总用户数</div></div></div>
-    <div class="stat-card blue"><div class="stat-icon blue">📊</div><div class="stat-info"><div class="num">-</div><div class="label">总请求量</div></div></div>
-    <div class="stat-card orange"><div class="stat-icon orange">📅</div><div class="stat-info"><div class="num">-</div><div class="label">今日请求</div></div></div>
-    <div class="stat-card red"><div class="stat-icon red">🚫</div><div class="stat-info"><div class="num">-</div><div class="label">今日阻断</div></div></div>
+<div class="stats-row stats-row-6" id="summaryCards">
+    <div class="stat-card blue"><div class="stat-icon blue"><svg class="ui-icon metric-icon" aria-hidden="true"><use href="/static/icons.svg#building"></use></svg></div><div class="stat-info"><div class="num">-</div><div class="label">租户总数</div></div></div>
+    <div class="stat-card green"><div class="stat-icon green"><svg class="ui-icon metric-icon" aria-hidden="true"><use href="/static/icons.svg#circle-check"></use></svg></div><div class="stat-info"><div class="num">-</div><div class="label">活跃租户</div></div></div>
+    <div class="stat-card purple"><div class="stat-icon purple"><svg class="ui-icon metric-icon" aria-hidden="true"><use href="/static/icons.svg#users"></use></svg></div><div class="stat-info"><div class="num">-</div><div class="label">总用户数</div></div></div>
+    <div class="stat-card blue"><div class="stat-icon blue"><svg class="ui-icon metric-icon" aria-hidden="true"><use href="/static/icons.svg#layout-dashboard"></use></svg></div><div class="stat-info"><div class="num">-</div><div class="label">总请求量</div></div></div>
+    <div class="stat-card orange"><div class="stat-icon orange"><svg class="ui-icon metric-icon" aria-hidden="true"><use href="/static/icons.svg#calendar"></use></svg></div><div class="stat-info"><div class="num">-</div><div class="label">今日请求</div></div></div>
+    <div class="stat-card red"><div class="stat-icon red"><svg class="ui-icon metric-icon" aria-hidden="true"><use href="/static/icons.svg#ban"></use></svg></div><div class="stat-info"><div class="num">-</div><div class="label">今日阻断</div></div></div>
 </div>
 
 <!-- 图表区：请求趋势 + Top 阻断租户 -->
-<div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 22px; margin-bottom: 22px;">
+<div class="split-grid">
     <!-- 最近7天请求趋势 -->
     <div class="card">
-        <h2><span class="card-icon">📈</span> 最近7天请求趋势</h2>
+        <h2 class="section-title"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#chart-line"></use></svg>最近 7 天请求趋势</h2>
         <div id="trendChart" style="height: 260px; display: flex; align-items: flex-end; gap: 6px; padding: 10px 0;">
             <div class="empty" style="width:100%;">加载中...</div>
         </div>
@@ -38,7 +38,7 @@
 
     <!-- Top 阻断租户 -->
     <div class="card">
-        <h2><span class="card-icon">🚫</span> 阻断请求 Top 5</h2>
+        <h2 class="section-title"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#ban"></use></svg>阻断请求 Top 5</h2>
         <div id="topBlocked" style="padding: 10px 0;">
             <div class="empty">加载中...</div>
         </div>
@@ -47,7 +47,7 @@
 
 <!-- 租户明细表 -->
 <div class="card">
-    <h2><span class="card-icon">📋</span> 各租户数据明细</h2>
+    <h2 class="section-title"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#clipboard-check"></use></svg>各租户数据明细</h2>
     <div class="table-wrap">
         <table>
             <thead>

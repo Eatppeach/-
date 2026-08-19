@@ -10,6 +10,7 @@ logs/
 tmp/
 server.log
 server.err.log
+server-*.log
 # 系统、编辑器文件
 .DS_Store
 *.sublime-workspace

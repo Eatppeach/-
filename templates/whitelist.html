@@ -1,14 +1,15 @@
 {% extends "base.html" %}
 {% block title %}白名单 - 大模型数据防护能力平台{% endblock %}
 {% block content %}
-<div class="card">
-    <div class="flex-between" style="margin-bottom: 16px;">
-        <div>
-            <h2>✅ 白名单管理</h2>
-            <p class="text-muted" style="margin-top: 4px;">白名单内的用户、IP 或文本内容将跳过安全检测，直接放行</p>
-        </div>
-        <button class="btn btn-primary" onclick="openModal('addWl')">＋ 添加白名单</button>
+<div class="page-heading">
+    <div class="page-heading-copy">
+        <h2 class="page-heading-title"><svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="/static/icons.svg#shield-check"></use></svg>白名单管理</h2>
+        <p class="page-heading-subtitle">白名单内的用户、IP 或文本内容将跳过安全检测，直接放行</p>
     </div>
+    <div class="page-actions"><button class="btn btn-primary" onclick="openModal('addWl')"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#plus"></use></svg>添加白名单</button></div>
+</div>
+
+<div class="card">
 
     <div class="table-wrap">
         <table>
@@ -19,11 +20,11 @@
                     <td><span class="code">{{ w.id }}</span></td>
                     <td>
                         {% if w.whitelist_type == 'user' %}
-                        <span class="tag tag-personal">👤 用户</span>
+                        <span class="tag tag-personal">用户</span>
                         {% elif w.whitelist_type == 'ip' %}
-                        <span class="tag tag-network">🌐 IP地址</span>
+                        <span class="tag tag-network">IP 地址</span>
                         {% elif w.whitelist_type == 'text' %}
-                        <span class="tag tag-business">📝 文本内容</span>
+                        <span class="tag tag-business">文本内容</span>
                         {% else %}
                         <span class="tag tag-default">{{ w.whitelist_type }}</span>
                         {% endif %}
@@ -40,7 +41,7 @@
                 </tr>
                 {% endfor %}
                 {% if not whitelist %}
-                <tr><td colspan="6" class="empty"><div class="empty-icon">📭</div>暂无白名单，点击"添加白名单"创建</td></tr>
+                <tr><td colspan="6" class="empty"><div class="empty-icon"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#inbox"></use></svg></div>暂无白名单，点击“添加白名单”创建</td></tr>
                 {% endif %}
             </tbody>
         </table>
@@ -49,9 +50,9 @@
 
 <div id="addWl" class="modal-overlay">
     <div class="modal">
-        <h3>＋ 添加白名单</h3>
+        <h3 class="section-title"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#plus"></use></svg>添加白名单</h3>
         <form onsubmit="addWl(event)">
-            <div class="form-group"><label>白名单类型</label><select name="whitelist_type"><option value="user">👤 用户 — 指定用户ID免检</option><option value="ip">🌐 IP地址 — 指定IP免检</option><option value="text">📝 文本内容 — 包含特定文本免检</option></select></div>
+            <div class="form-group"><label>白名单类型</label><select name="whitelist_type"><option value="user">用户 - 指定用户 ID 免检</option><option value="ip">IP 地址 - 指定 IP 免检</option><option value="text">文本内容 - 包含特定文本免检</option></select></div>
             <div class="form-group"><label>白名单值 *</label><input name="whitelist_value" required placeholder="如：trusted_user_001"><div class="help-text">根据类型填写对应的用户ID、IP地址或文本内容</div></div>
             <div class="form-group"><label>描述</label><input name="description" placeholder="添加原因说明"></div>
             <div class="modal-actions">

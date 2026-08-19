@@ -1,17 +1,18 @@
 {% extends "base.html" %}
 {% block title %}识别规则 - 大模型数据防护能力平台{% endblock %}
 {% block content %}
-<div class="card">
-    <div class="flex-between" style="margin-bottom: 16px;">
-        <div>
-            <h2>🔍 敏感数据识别规则</h2>
-            <p class="text-muted" style="margin-top: 4px;">定义用于检测敏感信息的正则表达式或关键词规则，支持按敏感级别和分类管理</p>
-        </div>
-        <div class="flex-center">
-            <button class="btn btn-outline btn-sm" onclick="reloadRules()">🔄 刷新规则到内存</button>
-            <button class="btn btn-primary" onclick="openModal('addModal')">＋ 添加规则</button>
-        </div>
+<div class="page-heading">
+    <div class="page-heading-copy">
+        <h2 class="page-heading-title"><svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="/static/icons.svg#search"></use></svg>敏感数据识别规则</h2>
+        <p class="page-heading-subtitle">定义用于检测敏感信息的正则表达式或关键词规则，支持按敏感级别和分类管理</p>
     </div>
+    <div class="page-actions">
+        <button class="btn btn-outline btn-sm" onclick="reloadRules()"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#refresh-cw"></use></svg>刷新规则</button>
+        <button class="btn btn-primary" onclick="openModal('addModal')"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#plus"></use></svg>添加规则</button>
+    </div>
+</div>
+
+<div class="card">
 
     <div class="table-wrap">
         <table>
@@ -29,11 +30,11 @@
                     <td class="ellipsis" style="max-width:240px;" title="{{ rule.pattern }}"><code class="code">{{ rule.pattern }}</code></td>
                     <td>
                         {% if rule.sensitivity_level == 'high' %}
-                        <span class="tag tag-high">🔴 高</span>
+                        <span class="tag tag-high">高</span>
                         {% elif rule.sensitivity_level == 'medium' %}
-                        <span class="tag tag-medium">🟠 中</span>
+                        <span class="tag tag-medium">中</span>
                         {% else %}
-                        <span class="tag tag-low">🟢 低</span>
+                        <span class="tag tag-low">低</span>
                         {% endif %}
                     </td>
                     <td><span class="tag tag-{{ rule.category }}">{{ rule.category }}</span></td>
@@ -52,7 +53,7 @@
                 </tr>
                 {% endfor %}
                 {% if not rules %}
-                <tr><td colspan="8" class="empty"><div class="empty-icon">📭</div>暂无规则，请点击"添加规则"创建</td></tr>
+                <tr><td colspan="8" class="empty"><div class="empty-icon"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#inbox"></use></svg></div>暂无规则，请点击“添加规则”创建</td></tr>
                 {% endif %}
             </tbody>
         </table>
@@ -62,7 +63,7 @@
 <!-- 添加规则弹窗 -->
 <div id="addModal" class="modal-overlay">
     <div class="modal">
-        <h3>＋ 添加识别规则</h3>
+        <h3 class="section-title"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#plus"></use></svg>添加识别规则</h3>
         <form onsubmit="submitRule(event)">
             <div class="form-row">
                 <div class="form-group"><label>规则名称 *</label><input name="name" required placeholder="如：身份证号"><div class="help-text">用于标识该规则的名称</div></div>

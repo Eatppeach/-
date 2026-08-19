@@ -7,11 +7,17 @@
     .result-meta { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
     .result-meta > div { padding: 8px 14px; background: #f8fafc; border-radius: 8px; border: 1px solid var(--border); font-size: 13px; }
     .block-alert { background: #fffbeb; padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; color: #92400e; border: 1px solid #fde68a; }
-    .processed-box { background: #f8fafc; padding: 14px; border-radius: 10px; word-break: break-all; font-size: 14px; line-height: 1.8; border: 1px solid var(--border); color: var(--text); }
+    .processed-box { background: #f8fafc; padding: 14px; border-radius: 8px; word-break: break-all; font-size: 14px; line-height: 1.8; border: 1px solid var(--border); color: var(--text); }
 </style>
 
+<div class="page-heading">
+    <div class="page-heading-copy">
+        <h2 class="page-heading-title"><svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="/static/icons.svg#flask"></use></svg>在线演示</h2>
+        <p class="page-heading-subtitle">验证敏感数据识别、脱敏和阻断策略的实际处理结果</p>
+    </div>
+</div>
+
 <div class="card">
-    <h2>🧪 在线演示 — 敏感数据识别与脱敏</h2>
     <p style="color:var(--text-muted); font-size:13px; margin-bottom: 16px;">
         输入包含敏感信息的文本，系统将自动识别并展示脱敏效果。支持身份证、手机号、银行卡、邮箱、GPS 坐标、统一社会信用代码等。
     </p>
@@ -20,13 +26,13 @@
         <textarea id="inputText" rows="5" placeholder="在此输入测试文本...">我的身份证号是110101199001011234，手机号是13812345678，
 银行卡号是6222021234567890123，邮箱是zhangsan@example.com，
 公司统一社会信用代码是91110108MA01ABCD1X。</textarea>
-        <div class="help-text">💡 提示：点击下方快捷按钮可快速填充测试文本</div>
+        <div class="help-text">点击下方快捷按钮可快速填充测试文本</div>
     </div>
 
     <div class="action-btns">
-        <button class="btn btn-primary" onclick="scanOnly()">🔍 仅扫描识别</button>
-        <button class="btn btn-success" onclick="protect()">🔐 安全检测 + 脱敏</button>
-        <button class="btn btn-danger" onclick="testBlock()">🚫 测试阻断（大量敏感数据）</button>
+        <button class="btn btn-primary" onclick="scanOnly()"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#search"></use></svg>仅扫描识别</button>
+        <button class="btn btn-success" onclick="protect()"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#shield-check"></use></svg>安全检测与脱敏</button>
+        <button class="btn btn-danger" onclick="testBlock()"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#ban"></use></svg>测试阻断</button>
     </div>
 
     <div class="quick-test-bar">
@@ -39,12 +45,12 @@
 </div>
 
 <div class="card" id="resultCard" style="display:none;">
-    <h2 id="resultTitle">📊 处理结果</h2>
+    <h2 id="resultTitle" class="section-title"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#layout-dashboard"></use></svg>处理结果</h2>
     <div id="resultContent"></div>
 </div>
 
 <div class="card" id="scanCard" style="display:none;">
-    <h2>🔍 识别详情</h2>
+    <h2 class="section-title"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#search"></use></svg>识别详情</h2>
     <div id="scanContent"></div>
 </div>
 
@@ -56,7 +62,7 @@ async function scanOnly() {
         body: JSON.stringify({text, user_id: 'demo_user'})
     });
     const data = await resp.json();
-    showResult('🔍 扫描结果', data);
+    showResult('扫描结果', data);
 }
 
 async function protect() {
@@ -66,7 +72,7 @@ async function protect() {
         body: JSON.stringify({text, user_id: 'demo_user'})
     });
     const data = await resp.json();
-    showResult('🔐 安全处理结果', data);
+    showResult('安全处理结果', data);
 }
 
 async function testBlock() {
@@ -76,7 +82,7 @@ async function testBlock() {
         body: JSON.stringify({text, user_id: 'demo_user'})
     });
     const data = await resp.json();
-    showResult('🚫 阻断测试结果', data);
+    showResult('阻断测试结果', data);
 }
 
 function showResult(title, data) {
@@ -85,13 +91,13 @@ function showResult(title, data) {
 
     let html = '';
     html += '<div class="result-meta">';
-    html += '<div><span class="text-muted">处理动作：</span><span class="tag tag-' + (data.action === 'blocked' ? 'high' : data.action === 'desensitized' ? 'medium' : 'low') + '">' + (data.action === 'blocked' ? '🚫 已阻断' : data.action === 'desensitized' ? '🔐 已脱敏' : '✅ 已放行') + '</span></div>';
+    html += '<div><span class="text-muted">处理动作：</span><span class="tag tag-' + (data.action === 'blocked' ? 'high' : data.action === 'desensitized' ? 'medium' : 'low') + '">' + (data.action === 'blocked' ? '已阻断' : data.action === 'desensitized' ? '已脱敏' : '已放行') + '</span></div>';
     html += '<div><span class="text-muted">阻断级别：</span><span class="tag tag-default">' + (data.block_level || '无') + '</span></div>';
     html += '<div><span class="text-muted">处理耗时：</span><strong>' + (data.processing_time_ms?.toFixed(2) || '0') + ' ms</strong></div>';
     html += '</div>';
 
     if (data.block_message) {
-        html += '<div class="block-alert">⚠ ' + data.block_message + '</div>';
+        html += '<div class="block-alert">' + data.block_message + '</div>';
     }
     if (data.processed_text) {
         html += '<div style="margin-bottom: 8px;"><strong>处理后的文本：</strong></div>';
@@ -104,7 +110,7 @@ function showResult(title, data) {
         document.getElementById('scanCard').style.display = 'block';
         let scanHtml = '';
         if (data.scan_result.matches.length === 0) {
-            scanHtml += '<p style="color: #22c55e; font-size: 15px; font-weight: 500;">✅ 未检测到敏感信息</p>';
+            scanHtml += '<p style="color: #16a15a; font-size: 15px; font-weight: 500;">未检测到敏感信息</p>';
         } else {
             scanHtml += '<p style="margin-bottom: 10px;">共检测到 <strong>' + data.scan_result.match_count + '</strong> 处敏感信息，最高级别：<span class="tag tag-' + data.scan_result.highest_level + '">' + data.scan_result.highest_level + '</span></p>';
             scanHtml += '<div class="table-wrap"><table><thead><tr><th>规则</th><th>匹配内容</th><th>敏感级别</th><th>分类</th></tr></thead><tbody>';

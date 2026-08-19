@@ -1,11 +1,14 @@
 {% extends "base.html" %}
 {% block title %}脱敏策略 - 大模型数据防护能力平台{% endblock %}
 {% block content %}
-<div class="card">
-    <div style="margin-bottom: 16px;">
-        <h2>🔐 脱敏策略配置</h2>
-        <p class="text-muted" style="margin-top: 4px;">定义检测到敏感信息后的脱敏处理方式，支持掩码、替换、加密、哈希、泛化等算法</p>
+<div class="page-heading">
+    <div class="page-heading-copy">
+        <h2 class="page-heading-title"><svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="/static/icons.svg#lock"></use></svg>脱敏策略配置</h2>
+        <p class="page-heading-subtitle">定义检测到敏感信息后的脱敏处理方式，支持掩码、替换、加密、哈希、泛化等算法</p>
     </div>
+</div>
+
+<div class="card">
 
     <div class="table-wrap">
         <table>
@@ -42,21 +45,21 @@
                 </tr>
                 {% endfor %}
                 {% if not policies %}
-                <tr><td colspan="7" class="empty"><div class="empty-icon">📭</div>暂无脱敏策略，请先添加识别规则</td></tr>
+                <tr><td colspan="7" class="empty"><div class="empty-icon"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#inbox"></use></svg></div>暂无脱敏策略，请先添加识别规则</td></tr>
                 {% endif %}
             </tbody>
         </table>
     </div>
 </div>
 
-<div class="card" style="background: #fafbfc;">
-    <h2>📖 算法说明</h2>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; font-size: 13px; color: #555;">
-        <div><strong>掩码 (mask)</strong><br><span class="text-muted">保留首尾若干字符，中间用 * 替换</span><br><span class="code">138****5678</span></div>
-        <div><strong>替换 (replace)</strong><br><span class="text-muted">用固定字符替换整个敏感信息</span><br><span class="code">[手机号已隐藏]</span></div>
-        <div><strong>加密 (encrypt)</strong><br><span class="text-muted">使用 AES 加密，可解密恢复</span><br><span class="code">iv2xP9...WQ==</span></div>
-        <div><strong>哈希 (hash)</strong><br><span class="text-muted">SHA256 单向哈希，不可恢复</span><br><span class="code">a1b2c3...d4e5</span></div>
-        <div><strong>泛化 (generalize)</strong><br><span class="text-muted">降低精度，如精确坐标改为城市</span><br><span class="code">北京市</span></div>
+<div class="card">
+    <h2 class="section-title"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#book-open"></use></svg>算法说明</h2>
+    <div class="info-grid">
+        <div class="info-item"><strong>掩码 (mask)</strong><br><span class="text-muted">保留首尾若干字符，中间用 * 替换</span><br><span class="code">138****5678</span></div>
+        <div class="info-item"><strong>替换 (replace)</strong><br><span class="text-muted">用固定字符替换整个敏感信息</span><br><span class="code">[手机号已隐藏]</span></div>
+        <div class="info-item"><strong>加密 (encrypt)</strong><br><span class="text-muted">使用 AES 加密，可解密恢复</span><br><span class="code">iv2xP9...WQ==</span></div>
+        <div class="info-item"><strong>哈希 (hash)</strong><br><span class="text-muted">SHA256 单向哈希，不可恢复</span><br><span class="code">a1b2c3...d4e5</span></div>
+        <div class="info-item"><strong>泛化 (generalize)</strong><br><span class="text-muted">降低精度，如精确坐标改为城市</span><br><span class="code">北京市</span></div>
     </div>
 </div>
 

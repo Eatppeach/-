@@ -1,29 +1,28 @@
 {% extends "base.html" %}
 {% block title %}审计日志 - 大模型数据防护能力平台{% endblock %}
 {% block content %}
-<div class="card">
-    <div class="flex-between" style="margin-bottom: 16px;">
-        <div>
-            <h2>📋 审计日志</h2>
-            <p class="text-muted" style="margin-top: 4px;">
+<div class="page-heading">
+    <div class="page-heading-copy">
+        <h2 class="page-heading-title"><svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="/static/icons.svg#clipboard-check"></use></svg>审计日志</h2>
+        <p class="page-heading-subtitle">
                 记录所有经过安全网关的请求详情，日志保留 180 天
                 {% if session.role != 'admin' %}<span class="tag tag-warning" style="margin-left: 4px;">仅显示您的记录</span>{% endif %}
-            </p>
-        </div>
-        {% if session.role == 'admin' %}
-        <button class="btn btn-danger btn-sm" onclick="cleanup()">清理过期日志</button>
-        {% endif %}
+        </p>
     </div>
+    {% if session.role == 'admin' %}<div class="page-actions"><button class="btn btn-danger btn-sm" onclick="cleanup()"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#trash"></use></svg>清理过期日志</button></div>{% endif %}
+</div>
+
+<div class="card">
 
     <!-- 筛选表单 -->
-    <form style="display: flex; gap: 16px; margin-bottom: 16px; padding: 16px; background: #f8fafc; border-radius: 10px; flex-wrap: wrap; align-items: flex-end; border: 1px solid var(--border);" onsubmit="event.preventDefault(); filterLogs();">
+    <form class="filter-bar" onsubmit="event.preventDefault(); filterLogs();">
         <div class="form-group" style="margin-bottom: 0;"><label>用户</label><input name="user_id" value="{{ user_id }}" placeholder="输入用户ID" style="width:140px;"></div>
-        <div class="form-group" style="margin-bottom: 0;"><label>处理动作</label><select name="action" style="width:140px;"><option value="">全部</option><option value="blocked" {% if action=='blocked' %}selected{% endif %}>🚫 已阻断</option><option value="desensitized" {% if action=='desensitized' %}selected{% endif %}>🔐 已脱敏</option><option value="passed" {% if action=='passed' %}selected{% endif %}>✅ 已放行</option></select></div>
+        <div class="form-group" style="margin-bottom: 0;"><label>处理动作</label><select name="action" style="width:140px;"><option value="">全部</option><option value="blocked" {% if action=='blocked' %}selected{% endif %}>已阻断</option><option value="desensitized" {% if action=='desensitized' %}selected{% endif %}>已脱敏</option><option value="passed" {% if action=='passed' %}selected{% endif %}>已放行</option></select></div>
         <div class="form-group" style="margin-bottom: 0;"><label>开始日期</label><input type="date" name="date_from" value="{{ date_from }}" style="width:140px;"></div>
         <div class="form-group" style="margin-bottom: 0;"><label>结束日期</label><input type="date" name="date_to" value="{{ date_to }}" style="width:140px;"></div>
         <div class="form-group" style="margin-bottom: 0;">
-            <button type="submit" class="btn btn-primary btn-sm">🔍 筛选</button>
-            <button type="button" class="btn btn-outline btn-sm" onclick="location.href='/audit'" style="margin-left: 6px;">重置</button>
+            <button type="submit" class="btn btn-primary btn-sm"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#filter"></use></svg>筛选</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="location.href='/audit'"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#rotate-ccw"></use></svg>重置</button>
         </div>
     </form>
 
@@ -42,18 +41,18 @@
                     <td style="font-size:11px; max-width:100px; overflow:hidden; text-overflow:ellipsis;" title="{{ log.triggered_rules }}">{{ log.triggered_rules or '—' }}</td>
                     <td>
                         {% if log.action_taken == 'blocked' %}
-                        <span class="tag tag-high">🚫 已阻断</span>
+                        <span class="tag tag-high">已阻断</span>
                         {% elif log.action_taken == 'desensitized' %}
-                        <span class="tag tag-medium">🔐 已脱敏</span>
+                        <span class="tag tag-medium">已脱敏</span>
                         {% else %}
-                        <span class="tag tag-low">✅ 已放行</span>
+                        <span class="tag tag-low">已放行</span>
                         {% endif %}
                     </td>
                     <td>{{ "%.1f"|format(log.processing_time_ms or 0) }}</td>
                 </tr>
                 {% endfor %}
                 {% if not logs %}
-                <tr><td colspan="9" class="empty"><div class="empty-icon">📭</div>暂无日志记录</td></tr>
+                <tr><td colspan="9" class="empty"><div class="empty-icon"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#inbox"></use></svg></div>暂无日志记录</td></tr>
                 {% endif %}
             </tbody>
         </table>

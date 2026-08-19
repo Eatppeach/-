@@ -13,7 +13,7 @@
     .chart-row canvas { display: block; width: 100% !important; height: 260px !important; max-height: none !important; flex: 0 0 260px; }
     .date-range { display: flex; gap: 6px; margin-bottom: 14px; align-items: center; }
     .date-range button {
-        padding: 6px 16px; border: 1.5px solid #e2e8f0; border-radius: 20px;
+        padding: 6px 16px; border: 1.5px solid #e2e8f0; border-radius: 6px;
         background: #fff; font-size: 13px; cursor: pointer; color: #64748b;
         transition: all 0.22s; font-weight: 500; font-family: inherit;
     }
@@ -22,16 +22,16 @@
     .date-range .range-label { font-size: 13px; color: var(--text-muted); margin-right: 4px; font-weight: 500; }
 
     .welcome-banner {
-        background: linear-gradient(135deg, #eef1ff 0%, #f0f4ff 50%, #faf5ff 100%);
-        border-radius: var(--radius-lg); padding: 18px 24px; margin-bottom: 20px;
+        background: #f5f8fc;
+        border-radius: 8px; padding: 18px 24px; margin-bottom: 20px;
         display: flex; align-items: center; gap: 16px;
         border: 1px solid #dde4ff;
     }
     .welcome-banner .banner-icon {
-        width: 48px; height: 48px; border-radius: 14px;
-        background: linear-gradient(135deg, var(--primary), #6366f1);
+        width: 48px; height: 48px; border-radius: 8px;
+        background: var(--primary);
         display: flex; align-items: center; justify-content: center;
-        font-size: 24px; box-shadow: 0 4px 12px var(--primary-glow);
+        font-size: 24px;
     }
     .welcome-banner .banner-text h3 { color: var(--primary); font-size: 16px; margin-bottom: 4px; font-weight: 600; }
     .welcome-banner .banner-text p { color: #64748b; font-size: 13px; }
@@ -41,8 +41,8 @@
 </style>
 
 {% if error %}
-<div style="background: #fef2f2; color: #dc2626; padding: 12px 20px; border-radius: 10px; margin-bottom: 16px; font-size: 14px; display: flex; align-items: center; gap: 8px; border: 1px solid #fecaca;">
-    <span>⚠</span> {{ error }}
+<div style="background: #fef2f2; color: #dc2626; padding: 12px 20px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; display: flex; align-items: center; gap: 8px; border: 1px solid #fecaca;">
+    <svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#circle-alert"></use></svg> {{ error }}
 </div>
 {% endif %}
 
@@ -52,12 +52,12 @@
         <h2 class="page-title">安全运营仪表盘</h2>
         <p class="page-caption">集中查看请求防护、策略命中和审计态势。</p>
     </div>
-    <a class="btn btn-outline quick-action" href="/chat">进入实时对话 <span aria-hidden="true">→</span></a>
+    <a class="btn btn-outline quick-action" href="/chat"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#message"></use></svg>进入实时对话</a>
 </div>
 
 <!-- 欢迎横幅 -->
 <div class="welcome-banner">
-    <div class="banner-icon">📊</div>
+    <div class="banner-icon"><svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="/static/icons.svg#layout-dashboard"></use></svg></div>
     <div class="banner-text">
         <h3>欢迎回来，{{ session.username }}</h3>
         <p>
@@ -73,35 +73,35 @@
 <!-- 统计卡片 -->
 <div class="stats-row">
     <div class="stat-card blue">
-        <div class="stat-icon blue">📨</div>
+        <div class="stat-icon blue"><svg class="ui-icon metric-icon" aria-hidden="true"><use href="/static/icons.svg#inbox"></use></svg></div>
         <div class="stat-info">
             <div class="num">{{ stats.total }}</div>
             <div class="label">总请求数</div>
         </div>
     </div>
     <div class="stat-card purple">
-        <div class="stat-icon purple">📅</div>
+        <div class="stat-icon purple"><svg class="ui-icon metric-icon" aria-hidden="true"><use href="/static/icons.svg#calendar"></use></svg></div>
         <div class="stat-info">
             <div class="num">{{ stats.today }}</div>
             <div class="label">今日请求</div>
         </div>
     </div>
     <div class="stat-card green">
-        <div class="stat-icon green">✅</div>
+        <div class="stat-icon green"><svg class="ui-icon metric-icon" aria-hidden="true"><use href="/static/icons.svg#circle-check"></use></svg></div>
         <div class="stat-info">
             <div class="num">{{ stats.passed }}</div>
             <div class="label">放行请求</div>
         </div>
     </div>
     <div class="stat-card orange">
-        <div class="stat-icon orange">🔐</div>
+        <div class="stat-icon orange"><svg class="ui-icon metric-icon" aria-hidden="true"><use href="/static/icons.svg#lock"></use></svg></div>
         <div class="stat-info">
             <div class="num">{{ stats.desensitized }}</div>
             <div class="label">脱敏处理</div>
         </div>
     </div>
     <div class="stat-card red">
-        <div class="stat-icon red">🚫</div>
+        <div class="stat-icon red"><svg class="ui-icon metric-icon" aria-hidden="true"><use href="/static/icons.svg#ban"></use></svg></div>
         <div class="stat-info">
             <div class="num">{{ stats.blocked }}</div>
             <div class="label">阻断请求</div>
@@ -112,7 +112,7 @@
 <!-- 日期范围切换 -->
 <div class="card">
     <div class="flex-between" style="margin-bottom: 12px;">
-        <h2>📈 请求趋势</h2>
+        <h2 class="section-title"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#chart-line"></use></svg>请求趋势</h2>
         <div class="date-range">
             <span class="range-label">时间范围：</span>
             <button class="active" onclick="loadDailyStats(7)">近 7 天</button>
@@ -134,7 +134,7 @@
 
 <!-- 系统概述 -->
 <div class="card">
-    <h2>📋 系统概述</h2>
+    <h2 class="section-title"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#clipboard-check"></use></svg>系统概述</h2>
     <p style="line-height: 2; font-size: 14px; color: var(--text-secondary);">
         本平台构建了一套覆盖<strong>"输入 → 处理 → 输出"</strong>全链路的大模型数据安全防护体系。
         通过<strong>实时识别</strong>、<strong>智能脱敏</strong>与<strong>行为阻断</strong>三重机制，

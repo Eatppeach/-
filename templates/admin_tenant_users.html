@@ -1,33 +1,33 @@
 {% extends "base.html" %}
 {% block title %}用户管理 - 大模型数据防护能力平台{% endblock %}
 {% block content %}
-<div class="page-header">
-    <div>
-        <h2>👥 用户管理</h2>
-        <p class="text-muted" style="margin-top: 4px;">管理「{{ tenant.name }}」下的用户账号</p>
+<div class="page-heading">
+    <div class="page-heading-copy">
+        <h2 class="page-heading-title"><svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="/static/icons.svg#users"></use></svg>用户管理</h2>
+        <p class="page-heading-subtitle">管理“{{ tenant.name }}”下的用户账号</p>
     </div>
-    <div style="display: flex; gap: 10px;">
-        <button class="btn btn-outline" onclick="openEditTenantModal()">✏️ 租户信息</button>
-        <button class="btn btn-primary" onclick="openCreateUserModal()">+ 创建用户</button>
+    <div class="page-actions">
+        <button class="btn btn-outline" onclick="openEditTenantModal()"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#pencil"></use></svg>租户信息</button>
+        <button class="btn btn-primary" onclick="openCreateUserModal()"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#plus"></use></svg>创建用户</button>
     </div>
 </div>
 
 <!-- 租户信息卡片 -->
 <div class="stats-row" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
     <div class="stat-card blue">
-        <div class="stat-icon blue">🏢</div>
+        <div class="stat-icon blue"><svg class="ui-icon metric-icon" aria-hidden="true"><use href="/static/icons.svg#building"></use></svg></div>
         <div class="stat-info"><div class="num">{{ tenant.name }}</div><div class="label">租户名称</div></div>
     </div>
     <div class="stat-card purple">
-        <div class="stat-icon purple">👥</div>
+        <div class="stat-icon purple"><svg class="ui-icon metric-icon" aria-hidden="true"><use href="/static/icons.svg#users"></use></svg></div>
         <div class="stat-info"><div class="num">{{ users|length }} / {{ tenant.max_users }}</div><div class="label">用户数 / 上限</div></div>
     </div>
     <div class="stat-card green">
-        <div class="stat-icon green">📧</div>
+        <div class="stat-icon green"><svg class="ui-icon metric-icon" aria-hidden="true"><use href="/static/icons.svg#inbox"></use></svg></div>
         <div class="stat-info"><div class="num" style="font-size: 14px;">{{ tenant.contact or '未设置' }}</div><div class="label">联系人</div></div>
     </div>
     <div class="stat-card orange">
-        <div class="stat-icon orange">📝</div>
+        <div class="stat-icon orange"><svg class="ui-icon metric-icon" aria-hidden="true"><use href="/static/icons.svg#file-text"></use></svg></div>
         <div class="stat-info"><div class="num" style="font-size: 14px;">{{ tenant.description or '无' }}</div><div class="label">描述</div></div>
     </div>
 </div>
@@ -52,22 +52,22 @@
                     <td><strong>{{ u.username }}</strong></td>
                     <td>
                         {% if u.role == 'admin' %}
-                        <span class="tag tag-warning">🔧 租户管理员</span>
+                        <span class="tag tag-warning">租户管理员</span>
                         {% else %}
-                        <span class="tag tag-info">👤 普通用户</span>
+                        <span class="tag tag-info">普通用户</span>
                         {% endif %}
                     </td>
                     <td class="text-muted">{{ u.created_at[:10] if u.created_at else '-' }}</td>
                     <td>
-                        <button class="btn btn-outline btn-xs" onclick="openEditUserModal({{ u.id }}, '{{ u.username|e }}', '{{ u.role }}')" title="编辑">✏️</button>
+                        <button class="btn btn-outline btn-xs btn-icon" onclick="openEditUserModal({{ u.id }}, '{{ u.username|e }}', '{{ u.role }}')" title="编辑" aria-label="编辑用户"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#pencil"></use></svg></button>
                         {% if u.username != session.username %}
-                        <button class="btn btn-danger btn-xs" onclick="confirmDeleteUser({{ u.id }}, '{{ u.username|e }}')" title="删除">🗑</button>
+                        <button class="btn btn-danger btn-xs btn-icon" onclick="confirmDeleteUser({{ u.id }}, '{{ u.username|e }}')" title="删除" aria-label="删除用户"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#trash"></use></svg></button>
                         {% endif %}
                     </td>
                 </tr>
                 {% endfor %}
                 {% if not users %}
-                <tr><td colspan="5" class="empty"><div class="empty-icon">👤</div>暂无用户，点击上方按钮创建</td></tr>
+                <tr><td colspan="5" class="empty"><div class="empty-icon"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#user"></use></svg></div>暂无用户，点击上方按钮创建</td></tr>
                 {% endif %}
             </tbody>
         </table>

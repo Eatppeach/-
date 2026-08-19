@@ -31,7 +31,7 @@
 
     .alg-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; font-size: 13px; color: var(--text-secondary); }
     .alg-card {
-        padding: 14px; background: #fff; border-radius: 10px;
+        padding: 14px; background: #fff; border-radius: 8px;
         border: 1px solid var(--border); transition: all var(--transition);
     }
     .alg-card:hover { border-color: var(--primary); box-shadow: var(--shadow-md); transform: translateY(-1px); }
@@ -44,24 +44,25 @@
     }
     .section-bar .desc { font-size: 13px; color: var(--text-muted); }
     .info-box {
-        background: #f8fafc; border-radius: 10px; padding: 16px;
+        background: #f8fafc; border-radius: 8px; padding: 16px;
         margin-top: 20px; border: 1px solid var(--border);
     }
     .info-box h3 { font-size: 14px; margin-bottom: 12px; color: var(--text); font-weight: 600; }
 </style>
 
-<div class="card">
-    <div class="flex-between" style="margin-bottom: 0;">
-        <div>
-            <h2>🛡 安全规则管理</h2>
-            <p class="text-muted" style="margin-top: 4px;">统一管理敏感数据识别规则与脱敏策略，定义检测模式与处理方式</p>
-        </div>
+<div class="page-heading">
+    <div class="page-heading-copy">
+        <h2 class="page-heading-title"><svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="/static/icons.svg#shield-check"></use></svg>安全规则管理</h2>
+        <p class="page-heading-subtitle">统一管理敏感数据识别规则与脱敏策略，定义检测模式与处理方式</p>
     </div>
+</div>
+
+<div class="card">
 
     <!-- 标签页切换 -->
     <div class="tab-nav">
-        <button class="tab-btn active" onclick="switchTab('rules')">🔍 识别规则</button>
-        <button class="tab-btn" onclick="switchTab('policies')">🔐 脱敏策略</button>
+        <button class="tab-btn active" onclick="switchTab('rules')"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#search"></use></svg>识别规则</button>
+        <button class="tab-btn" onclick="switchTab('policies')"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#lock"></use></svg>脱敏策略</button>
     </div>
 
     <!-- ========== 识别规则面板 ========== -->
@@ -69,16 +70,16 @@
         <div class="section-bar">
             <span class="desc">定义用于检测敏感信息的正则表达式或关键词规则</span>
             <div class="flex-center">
-                <button class="btn btn-outline btn-sm" onclick="reloadRules()">🔄 刷新到内存</button>
-                <button class="btn btn-primary" onclick="openAddModal()">＋ 添加规则</button>
+                <button class="btn btn-outline btn-sm" onclick="reloadRules()"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#refresh-cw"></use></svg>刷新规则</button>
+                <button class="btn btn-primary" onclick="openAddModal()"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#plus"></use></svg>添加规则</button>
             </div>
         </div>
 
         <!-- 分类子Tab -->
         <div class="tab-nav" style="margin-bottom: 16px; border-bottom-width: 1px;">
-            <button class="tab-btn active" onclick="filterCategory('all', this)">📋 全部</button>
-            <button class="tab-btn" onclick="filterCategory('basic', this)">🔒 基础规则</button>
-            <button class="tab-btn" onclick="filterCategory('industry', this)">🏭 行业规则</button>
+            <button class="tab-btn active" onclick="filterCategory('all', this)">全部</button>
+            <button class="tab-btn" onclick="filterCategory('basic', this)">基础规则</button>
+            <button class="tab-btn" onclick="filterCategory('industry', this)">行业规则</button>
         </div>
 
         <div class="table-wrap">
@@ -98,11 +99,11 @@
                         <td class="ellipsis" style="max-width:240px;" title="{{ rule.pattern }}"><code class="code">{{ rule.pattern }}</code></td>
                         <td>
                             {% if rule.sensitivity_level == 'high' %}
-                            <span class="tag tag-high">🔴 高</span>
+                            <span class="tag tag-high">高</span>
                             {% elif rule.sensitivity_level == 'medium' %}
-                            <span class="tag tag-medium">🟠 中</span>
+                            <span class="tag tag-medium">中</span>
                             {% else %}
-                            <span class="tag tag-low">🟢 低</span>
+                            <span class="tag tag-low">低</span>
                             {% endif %}
                         </td>
                         <td><span class="tag tag-{{ _cats }}">{{ _cats }}</span></td>
@@ -123,7 +124,7 @@
                 </tbody>
             </table>
         </div>
-        <div id="rules-empty" class="empty" style="display:none;"><div class="empty-icon">📭</div><span id="rules-empty-text">暂无规则</span></div>
+        <div id="rules-empty" class="empty" style="display:none;"><div class="empty-icon"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#inbox"></use></svg></div><span id="rules-empty-text">暂无规则</span></div>
     </div>
 
     <!-- ========== 脱敏策略面板 ========== -->
@@ -167,41 +168,41 @@
                     </tr>
                     {% endfor %}
                     {% if not policies %}
-                    <tr><td colspan="7" class="empty"><div class="empty-icon">📭</div>暂无脱敏策略，请先添加识别规则</td></tr>
+                    <tr><td colspan="7" class="empty"><div class="empty-icon"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#inbox"></use></svg></div>暂无脱敏策略，请先添加识别规则</td></tr>
                     {% endif %}
                 </tbody>
             </table>
         </div>
 
         <div class="info-box">
-            <h3>📖 算法说明</h3>
+            <h3 class="section-title"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#book-open"></use></svg>算法说明</h3>
             <div class="alg-grid">
                 <div class="alg-card">
-                    <div class="alg-icon">🎭</div>
+                    <div class="alg-icon"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#shield-check"></use></svg></div>
                     <strong>掩码 (mask)</strong>
                     <span class="text-muted">保留首尾若干字符，中间用 * 替换</span><br>
                     <span class="code">138****5678</span>
                 </div>
                 <div class="alg-card">
-                    <div class="alg-icon">🔄</div>
+                    <div class="alg-icon"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#refresh-cw"></use></svg></div>
                     <strong>替换 (replace)</strong>
                     <span class="text-muted">用固定字符替换整个敏感信息</span><br>
                     <span class="code">[手机号已隐藏]</span>
                 </div>
                 <div class="alg-card">
-                    <div class="alg-icon">🔒</div>
+                    <div class="alg-icon"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#lock"></use></svg></div>
                     <strong>加密 (encrypt)</strong>
                     <span class="text-muted">使用 AES 加密，可解密恢复</span><br>
                     <span class="code">iv2xP9...WQ==</span>
                 </div>
                 <div class="alg-card">
-                    <div class="alg-icon">🔑</div>
+                    <div class="alg-icon"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#key"></use></svg></div>
                     <strong>哈希 (hash)</strong>
                     <span class="text-muted">SHA256 单向哈希，不可恢复</span><br>
                     <span class="code">a1b2c3...d4e5</span>
                 </div>
                 <div class="alg-card">
-                    <div class="alg-icon">🌐</div>
+                    <div class="alg-icon"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#globe"></use></svg></div>
                     <strong>泛化 (generalize)</strong>
                     <span class="text-muted">降低精度，如精确坐标改为城市</span><br>
                     <span class="code">北京市</span>
@@ -214,7 +215,7 @@
 <!-- 添加规则弹窗 -->
 <div id="addModal" class="modal-overlay">
     <div class="modal">
-        <h3>＋ 添加识别规则</h3>
+        <h3 class="section-title"><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#plus"></use></svg>添加识别规则</h3>
         <form onsubmit="submitRule(event)">
             <div class="form-row">
                 <div class="form-group"><label>规则名称 *</label><input name="name" required placeholder="如：身份证号"><div class="help-text">用于标识该规则的名称</div></div>
@@ -229,7 +230,7 @@
                         <option value="personal">个人隐私</option>
                         <option value="network">网络信息</option>
                         <option value="credential">凭证信息</option>
-                        <option value="prompt_injection">🚨 Prompt注入</option>
+                        <option value="prompt_injection">Prompt 注入</option>
                     </optgroup>
                     <optgroup label="行业规则">
                         <option value="business">商业机密</option>

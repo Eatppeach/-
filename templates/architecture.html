@@ -7,22 +7,24 @@
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: "Inter", "Microsoft YaHei", "PingFang SC", sans-serif; background: linear-gradient(135deg, #edf4fc 0%, #f8fbff 55%, #e8f8fb 100%); color: #14233b; padding: 34px 28px; }
+        body { font-family: "Inter", "Microsoft YaHei", "PingFang SC", sans-serif; background: #f5f7fa; color: #14233b; padding: 32px 28px; }
         .container { max-width: 1400px; margin: 0 auto; }
-        h1 { text-align: center; margin-bottom: 8px; font-size: 26px; color: #1769e8; }
-        .subtitle { text-align: center; color: #8190a5; margin-bottom: 32px; font-size: 13px; }
-        .diagram-box { background: rgba(255,255,255,.94); border: 1px solid #e1ebf6; border-radius: 22px; box-shadow: 0 12px 32px rgba(79,121,166,.09); padding: 28px; margin-bottom: 22px; }
-        .diagram-box h2 { font-size: 18px; margin-bottom: 18px; color: #14233b; border-left: 4px solid #1769e8; padding-left: 12px; }
+        h1 { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 26px; color: #14233b; }
+        .subtitle { color: #8190a5; margin-bottom: 26px; font-size: 13px; }
+        .diagram-box { background: #ffffff; border: 1px solid #e1ebf6; border-radius: 8px; box-shadow: 0 1px 2px rgba(23,35,54,.04); padding: 26px; margin-bottom: 18px; }
+        .diagram-box h2 { font-size: 18px; margin-bottom: 18px; color: #14233b; border-left: 3px solid #1769e8; padding-left: 12px; }
         .diagram-box h3 { font-size: 15px; margin: 20px 0 12px; color: #536781; }
         .mermaid { display: flex; justify-content: center; overflow-x: auto; }
-        .legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 16px; padding: 12px; background: #f3f7fd; border: 1px solid #e1e9f3; border-radius: 12px; font-size: 13px; }
+        .legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 16px; padding: 12px; background: #f8fafc; border: 1px solid #e1e9f3; border-radius: 8px; font-size: 13px; }
         .legend-item { display: flex; align-items: center; gap: 6px; }
         .legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+        .ui-icon { width: 24px; height: 24px; fill: none; stroke: #1769e8; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+        @media (max-width: 768px) { body { padding: 20px 14px; } h1 { font-size: 21px; } .diagram-box { padding: 18px; } }
     </style>
 </head>
 <body>
 <div class="container">
-    <h1>大模型数据防护能力平台 — 系统架构</h1>
+    <h1><svg class="ui-icon" aria-hidden="true"><use href="/static/icons.svg#network"></use></svg>大模型数据防护能力平台 - 系统架构</h1>
     <p class="subtitle">包含分层架构、模块依赖、核心函数调用关系</p>
 
     <!-- ==================== 图1：系统分层架构 ==================== -->
@@ -30,12 +32,12 @@
         <h2>一、系统分层架构图</h2>
         <div class="mermaid">
 graph TB
-    subgraph External["🌐 外部系统"]
+    subgraph External["外部系统"]
         LLM["上游 LLM API<br/>(OpenAI / DeepSeek / Qwen)"]
         Browser["用户浏览器"]
     end
 
-    subgraph Presentation["📺 展示层 — templates/"]
+    subgraph Presentation["展示层 - templates/"]
         CHAT["chat.html<br/>实时对话页面"]
         DEMO["demo.html<br/>在线演示"]
         INDEX["index.html<br/>仪表盘"]
@@ -46,7 +48,7 @@ graph TB
         WL_P["whitelist.html<br/>白名单"]
     end
 
-    subgraph App["⚙️ 应用层 — app.py (Flask)"]
+    subgraph App["应用层 - app.py (Flask)"]
         direction TB
         MGMT["管理页面路由<br/>/ /rules /policies /block /audit ..."]
         SCAN["/api/gateway/scan<br/>敏感信息扫描"]
@@ -55,7 +57,7 @@ graph TB
         CRUD["CRUD API<br/>规则/策略/白名单/阻断"]
     end
 
-    subgraph Gateway["🛡️ 网关层 — proxy_gateway.py"]
+    subgraph Gateway["网关层 - proxy_gateway.py"]
         GW["SecurityGateway 单例<br/>gateway"]
         PR["process_request()<br/>请求安全处理"]
         PO["process_output()<br/>输出安全扫描"]
@@ -65,12 +67,12 @@ graph TB
         EC["_evaluate_condition()<br/>条件评估"]
     end
 
-    subgraph Engine["🔍 引擎层"]
+    subgraph Engine["引擎层"]
         RE["RecognitionEngine<br/>recognition_engine<br/>.scan() 敏感数据识别<br/>.scan_file() 文件扫描<br/>._is_whitelisted() 白名单"]
         DE["DesensitizationEngine<br/>desensitization_engine<br/>.desensitize() 数据脱敏<br/>._mask() 掩码<br/>._encrypt() 加密<br/>._hash() 哈希<br/>._generalize() 泛化"]
     end
 
-    subgraph Data["💾 数据层 — database.py + SQLite"]
+    subgraph Data["数据层 - database.py + SQLite"]
         DB[("data_protection.db<br/>SQLite")]
         RULES_DB["recognition_rules<br/>识别规则表"]
         POLICIES_DB["desensitization_policies<br/>脱敏策略表"]
@@ -204,7 +206,7 @@ sequenceDiagram
         GW->>DE: desensitize(accumulated, matches)
         DE-->>GW: 脱敏后输出
         GW-->>API: yield warning
-        API-->>UI: "⚠ 模型输出中检测到敏感信息"
+        API-->>UI: "模型输出中检测到敏感信息"
     end
     GW-->>API: yield "data: [DONE]\n"
     API-->>UI: 流结束
